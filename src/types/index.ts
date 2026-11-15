@@ -9,3 +9,4 @@ export type NuevoSimbolo = Database['public']['Tables']['simbolos']['Insert'];
 export type EditarSimbolo = Database['public']['Tables']['simbolos']['Update'];
 
 export type EstadoAnimo = 'tranquilo' | 'lucido' | 'raro' | 'pesadilla';
+export type SuenoConSimbolos = Sueno & { simbolos: string[] };
