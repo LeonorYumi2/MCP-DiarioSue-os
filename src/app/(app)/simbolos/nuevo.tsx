@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Boton } from '@/components/Boton';
+import { Campo } from '@/components/Campo';
+import { GlassCard } from '@/components/GlassCard';
+import { GradientBackground } from '@/components/GradientBackground';
+import { colores } from '@/constants/theme';
 import { useSimbolos } from '@/hooks/useSimbolos';
 import { mensajeError } from '@/lib/errores';
 
@@ -46,7 +51,7 @@ export default function FormularioSimbolo() {
   }
 
   function confirmarBorrado() {
-    Alert.alert('Eliminar símbolo', 'Se quitará también de los sueños que lo usan. ¿Continuar?', [
+    Alert.alert('Eliminar símbolo', 'Se quitará también de los sueños que lo usan.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -56,51 +61,46 @@ export default function FormularioSimbolo() {
             await borrar(id!);
             router.back();
           } catch (e) {
-            Alert.alert('Error', mensajeError(e, 'No se pudo eliminar.'));
+            Alert.alert('No se pudo eliminar', mensajeError(e));
           }
         },
       },
     ]);
   }
 
-  if (!listo) return <ActivityIndicator style={{ marginTop: 40 }} />;
-
   return (
-    <ScrollView contentContainerStyle={s.contenedor} keyboardShouldPersistTaps="handled">
+    <GradientBackground>
       <Stack.Screen options={{ title: editando ? 'Editar símbolo' : 'Nuevo símbolo' }} />
 
-      <Text style={s.label}>Nombre</Text>
-      <TextInput style={s.input} value={nombre} onChangeText={setNombre} placeholder="Ej. Agua" />
+      {!listo ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={colores.tinta} />
+        </View>
+      ) : (
+        <ScrollView
+  contentContainerStyle={{ gap: 16, padding: 20, paddingBottom: 48 }}
+  keyboardShouldPersistTaps="handled"
+>
+          <GlassCard relleno="p-5">
+            <View className="gap-4">
+              <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder="Ej. Agua" />
+              <Campo
+                etiqueta="Significado"
+                value={significado}
+                onChangeText={setSignificado}
+                multilinea
+                placeholder="¿Qué representa para ti?"
+              />
+            </View>
+          </GlassCard>
 
-      <Text style={s.label}>Significado</Text>
-      <TextInput style={[s.input, s.multilinea]} value={significado} onChangeText={setSignificado}
-        placeholder="¿Qué representa para ti?" multiline />
+          {error && <Text className="font-medio text-sm text-peligro">{error}</Text>}
 
-      {error && <Text style={s.error}>{error}</Text>}
+          <Boton texto={editando ? 'Guardar cambios' : 'Guardar símbolo'} onPress={guardar} cargando={guardando} />
 
-      <Pressable style={s.boton} onPress={guardar} disabled={guardando}>
-        {guardando
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={s.botonTexto}>{editando ? 'Guardar cambios' : 'Guardar símbolo'}</Text>}
-      </Pressable>
-
-      {editando && (
-        <Pressable style={s.eliminar} onPress={confirmarBorrado}>
-          <Text style={s.eliminarTexto}>Eliminar símbolo</Text>
-        </Pressable>
+          {editando && <Boton texto="Eliminar símbolo" onPress={confirmarBorrado} variante="peligro" />}
+        </ScrollView>
       )}
-    </ScrollView>
+    </GradientBackground>
   );
 }
-
-const s = StyleSheet.create({
-  contenedor: { padding: 20, gap: 10 },
-  label: { fontWeight: '600', marginTop: 6 },
-  input: { borderWidth: 1, borderColor: '#999', borderRadius: 10, padding: 12 },
-  multilinea: { minHeight: 100, textAlignVertical: 'top' },
-  error: { color: '#DC2626' },
-  boton: { backgroundColor: '#8B5CF6', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 12 },
-  botonTexto: { color: '#fff', fontWeight: '600' },
-  eliminar: { borderWidth: 1, borderColor: '#DC2626', borderRadius: 10, padding: 14, alignItems: 'center' },
-  eliminarTexto: { color: '#DC2626', fontWeight: '600' },
-});

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Boton } from '@/components/Boton';
+import { GradientBackground } from '@/components/GradientBackground';
 import { SuenoForm } from '@/components/SuenoForm';
+import { colores } from '@/constants/theme';
 import { useSuenos } from '@/hooks/useSuenos';
 import { mensajeError } from '@/lib/errores';
 import type { Sueno } from '@/types';
@@ -23,7 +26,7 @@ export default function EditarSueno() {
   }, [id, obtener, listarSimbolosDeSueno]);
 
   function confirmarBorrado() {
-    Alert.alert('Eliminar sueño', '¿Seguro? Esta acción no se puede deshacer.', [
+    Alert.alert('Eliminar sueño', 'Esta acción no se puede deshacer.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -33,36 +36,41 @@ export default function EditarSueno() {
             await borrar(id);
             router.back();
           } catch (e) {
-            Alert.alert('Error', mensajeError(e, 'No se pudo eliminar.'));
+            Alert.alert('No se pudo eliminar', mensajeError(e));
           }
         },
       },
     ]);
   }
 
-  if (error) return <Text style={s.error}>{error}</Text>;
-  if (!sueno || !seleccion) return <ActivityIndicator style={{ marginTop: 40 }} />;
+  if (error || !sueno || !seleccion) {
+    return (
+      <GradientBackground>
+        <View className="flex-1 items-center justify-center px-6">
+          {error ? (
+            <Text className="text-center font-medio text-base text-peligro">{error}</Text>
+          ) : (
+            <ActivityIndicator color={colores.tinta} />
+          )}
+        </View>
+      </GradientBackground>
+    );
+  }
 
   return (
-    <SuenoForm
-      inicial={sueno}
-      simbolosIniciales={seleccion}
-      textoBoton="Guardar cambios"
-      onGuardar={async (datos, simboloIds) => {
-        await actualizar(id, datos);
-        await guardarSimbolos(id, simboloIds);
-        router.back();
-      }}
-    >
-      <Pressable style={s.eliminar} onPress={confirmarBorrado}>
-        <Text style={s.eliminarTexto}>Eliminar sueño</Text>
-      </Pressable>
-    </SuenoForm>
+    <GradientBackground>
+      <SuenoForm
+        inicial={sueno}
+        simbolosIniciales={seleccion}
+        textoBoton="Guardar cambios"
+        onGuardar={async (datos, simboloIds) => {
+          await actualizar(id, datos);
+          await guardarSimbolos(id, simboloIds);
+          router.back();
+        }}
+      >
+        <Boton texto="Eliminar sueño" onPress={confirmarBorrado} variante="peligro" />
+      </SuenoForm>
+    </GradientBackground>
   );
 }
-
-const s = StyleSheet.create({
-  error: { color: '#DC2626', padding: 20 },
-  eliminar: { borderWidth: 1, borderColor: '#DC2626', borderRadius: 10, padding: 14, alignItems: 'center' },
-  eliminarTexto: { color: '#DC2626', fontWeight: '600' },
-});

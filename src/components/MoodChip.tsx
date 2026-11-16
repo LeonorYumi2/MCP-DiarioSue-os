@@ -1,18 +1,27 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
+import { colores } from '@/constants/theme';
 
-type Props = { etiqueta: string; seleccionado: boolean; onPress: () => void };
+type Props = {
+  etiqueta: string;
+  seleccionado: boolean;
+  onPress: () => void;
+  color?: string;
+};
 
-export function MoodChip({ etiqueta, seleccionado, onPress }: Props) {
+export function MoodChip({ etiqueta, seleccionado, onPress, color = colores.acento }: Props) {
   return (
-    <Pressable onPress={onPress} style={[s.chip, seleccionado && s.activo]}>
-      <Text style={[s.texto, seleccionado && s.textoActivo]}>{etiqueta}</Text>
+    <Pressable
+      onPress={onPress}
+      className={`rounded-full border px-4 py-2.5 active:opacity-80 ${
+        seleccionado ? 'border-transparent' : 'border-borde bg-campo'
+      }`}
+      style={seleccionado ? { backgroundColor: color } : undefined}
+    >
+      <Text
+        className={`text-sm ${seleccionado ? 'font-fuerte text-medianoche' : 'font-medio text-tinta-suave'}`}
+      >
+        {etiqueta}
+      </Text>
     </Pressable>
   );
 }
-
-const s = StyleSheet.create({
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#999' },
-  activo: { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' },
-  texto: { color: '#444' },
-  textoActivo: { color: '#fff', fontWeight: '600' },
-});

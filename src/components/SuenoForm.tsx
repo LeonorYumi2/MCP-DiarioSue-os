@@ -1,12 +1,24 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Plus } from 'lucide-react-native';
+import { Boton } from '@/components/Boton';
+import { Campo } from '@/components/Campo';
+import { GlassCard } from '@/components/GlassCard';
+import { LottieMood } from '@/components/LottieMood';
 import { MoodChip } from '@/components/MoodChip';
+import { colorDeEstado, colores } from '@/constants/theme';
 import { useSimbolos } from '@/hooks/useSimbolos';
 import { mensajeError } from '@/lib/errores';
 import type { EstadoAnimo, NuevoSueno } from '@/types';
 
 const ESTADOS: EstadoAnimo[] = ['tranquilo', 'lucido', 'raro', 'pesadilla'];
+const ETIQUETAS: Record<EstadoAnimo, string> = {
+  tranquilo: 'Tranquilo',
+  lucido: 'Lúcido',
+  raro: 'Raro',
+  pesadilla: 'Pesadilla',
+};
 
 type Props = {
   inicial?: Partial<NuevoSueno>;
@@ -26,6 +38,8 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const color = colorDeEstado(estado);
+
   useEffect(() => {
     recargar();
   }, [recargar]);
@@ -43,12 +57,7 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
     setError(null);
     try {
       await onGuardar(
-        {
-          titulo: titulo.trim(),
-          relato: relato.trim() || null,
-          estado_animo: estado,
-          intensidad,
-        },
+        { titulo: titulo.trim(), relato: relato.trim() || null, estado_animo: estado, intensidad },
         elegidos
       );
     } catch (e) {
@@ -59,62 +68,85 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
   }
 
   return (
-    <ScrollView contentContainerStyle={s.contenedor} keyboardShouldPersistTaps="handled">
-      <Text style={s.label}>Título</Text>
-      <TextInput style={s.input} value={titulo} onChangeText={setTitulo} placeholder="Ej. Volaba sobre el mar" />
+   <ScrollView
+  contentContainerStyle={{ gap: 16, padding: 20, paddingBottom: 48 }}
+  keyboardShouldPersistTaps="handled"
+>
+      <GlassCard relleno="p-5">
+        <View className="gap-4">
+          <Campo etiqueta="Título" value={titulo} onChangeText={setTitulo} placeholder="Ej. Volaba sobre el mar" />
+          <Campo
+            etiqueta="Relato"
+            value={relato}
+            onChangeText={setRelato}
+            multilinea
+            placeholder="Cuéntalo con detalle mientras lo recuerdes"
+          />
+        </View>
+      </GlassCard>
 
-      <Text style={s.label}>Relato</Text>
-      <TextInput style={[s.input, s.multilinea]} value={relato} onChangeText={setRelato}
-        placeholder="Cuéntalo con detalle..." multiline />
+      <GlassCard relleno="p-5">
+        <Text className="font-fuerte text-lg text-tinta">Cómo se sintió</Text>
 
-      <Text style={s.label}>Estado de ánimo</Text>
-      <View style={s.fila}>
-        {ESTADOS.map((e) => (
-          <MoodChip key={e} etiqueta={e} seleccionado={estado === e} onPress={() => setEstado(e)} />
-        ))}
-      </View>
+        <View className="my-4 items-center">
+          <View
+            className="h-28 w-28 items-center justify-center overflow-hidden rounded-full"
+            style={{ backgroundColor: `${color}30` }}
+          >
+            <LottieMood estado={estado} tamano={96} />
+          </View>
+        </View>
 
-      <Text style={s.label}>Intensidad</Text>
-      <View style={s.fila}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <MoodChip key={n} etiqueta={String(n)} seleccionado={intensidad === n} onPress={() => setIntensidad(n)} />
-        ))}
-      </View>
-
-      <Text style={s.label}>Símbolos del sueño</Text>
-      {simbolos.length === 0 ? (
-        <Text style={s.ayuda}>
-          Aún no tienes símbolos. <Link href="/simbolos/nuevo" style={s.enlace}>Crea el primero</Link>
-        </Text>
-      ) : (
-        <View style={s.fila}>
-          {simbolos.map((sim) => (
-            <MoodChip key={sim.id} etiqueta={sim.nombre} seleccionado={elegidos.includes(sim.id)}
-              onPress={() => alternar(sim.id)} />
+        <View className="flex-row flex-wrap gap-2">
+          {ESTADOS.map((e) => (
+            <MoodChip
+              key={e}
+              etiqueta={ETIQUETAS[e]}
+              seleccionado={estado === e}
+              color={colorDeEstado(e)}
+              onPress={() => setEstado(e)}
+            />
           ))}
         </View>
-      )}
 
-      {error && <Text style={s.error}>{error}</Text>}
+        <Text className="mb-2 mt-5 font-medio text-sm text-tinta-suave">Intensidad</Text>
+        <View className="flex-row gap-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <MoodChip key={n} etiqueta={String(n)} seleccionado={intensidad === n} color={color} onPress={() => setIntensidad(n)} />
+          ))}
+        </View>
+      </GlassCard>
 
-      <Pressable style={s.boton} onPress={enviar} disabled={guardando}>
-        {guardando ? <ActivityIndicator color="#fff" /> : <Text style={s.botonTexto}>{textoBoton}</Text>}
-      </Pressable>
+      <GlassCard relleno="p-5">
+        <Text className="font-fuerte text-lg text-tinta">Símbolos del sueño</Text>
+
+        {simbolos.length === 0 ? (
+          <Pressable
+            onPress={() => router.push('/simbolos/nuevo')}
+            className="mt-3 flex-row items-center gap-2 active:opacity-70"
+          >
+            <Plus size={18} color={colores.acento} />
+            <Text className="font-medio text-base text-tinta">Crea tu primer símbolo</Text>
+          </Pressable>
+        ) : (
+          <View className="mt-3 flex-row flex-wrap gap-2">
+            {simbolos.map((sim) => (
+              <MoodChip
+                key={sim.id}
+                etiqueta={sim.nombre}
+                seleccionado={elegidos.includes(sim.id)}
+                onPress={() => alternar(sim.id)}
+              />
+            ))}
+          </View>
+        )}
+      </GlassCard>
+
+      {error && <Text className="font-medio text-sm text-peligro">{error}</Text>}
+
+      <Boton texto={textoBoton} onPress={enviar} cargando={guardando} />
 
       {children}
     </ScrollView>
   );
 }
-
-const s = StyleSheet.create({
-  contenedor: { padding: 20, gap: 10 },
-  label: { fontWeight: '600', marginTop: 6 },
-  input: { borderWidth: 1, borderColor: '#999', borderRadius: 10, padding: 12 },
-  multilinea: { minHeight: 110, textAlignVertical: 'top' },
-  fila: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  ayuda: { color: '#666' },
-  enlace: { color: '#8B5CF6', fontWeight: '600' },
-  error: { color: '#DC2626' },
-  boton: { backgroundColor: '#8B5CF6', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 12 },
-  botonTexto: { color: '#fff', fontWeight: '600' },
-});

@@ -1,4 +1,3 @@
-import * as Linking from 'expo-linking';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import * as auth from '@/services/auth';
@@ -9,6 +8,8 @@ type AuthContextType = {
   registrar: typeof auth.registrar;
   iniciarSesion: typeof auth.iniciarSesion;
   cerrarSesion: typeof auth.cerrarSesion;
+  verificarCodigo: typeof auth.verificarCodigo;
+  reenviarCodigo: typeof auth.reenviarCodigo;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -16,14 +17,10 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [cargando, setCargando] = useState(true);
-    const url = Linking.useLinkingURL();
 
   useEffect(() => {
-    if (url) auth.sesionDesdeUrl(url).catch(() => {});
-  }, [url]);
-
-  useEffect(() => {
-    auth.obtenerSesion()
+    auth
+      .obtenerSesion()
       .then(setSession)
       .catch(() => setSession(null))
       .finally(() => setCargando(false));
@@ -38,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       registrar: auth.registrar,
       iniciarSesion: auth.iniciarSesion,
       cerrarSesion: auth.cerrarSesion,
+      verificarCodigo: auth.verificarCodigo,
+      reenviarCodigo: auth.reenviarCodigo,
     }),
     [session, cargando]
   );

@@ -1,10 +1,17 @@
 import { useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { Plus, Tags } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Boton } from '@/components/Boton';
+import { GlassCard } from '@/components/GlassCard';
+import { GradientBackground } from '@/components/GradientBackground';
+import { DESENFOQUE_EN_LISTAS, colores } from '@/constants/theme';
 import { useSimbolos } from '@/hooks/useSimbolos';
 
 export default function ListaSimbolos() {
   const { simbolos, cargando, error, recargar } = useSimbolos();
+  const insets = useSafeAreaInsets();
 
   useFocusEffect(
     useCallback(() => {
@@ -13,41 +20,51 @@ export default function ListaSimbolos() {
   );
 
   return (
-    <View style={s.contenedor}>
-      <Pressable style={s.boton} onPress={() => router.push('/simbolos/nuevo')}>
-        <Text style={s.botonTexto}>+ Nuevo símbolo</Text>
-      </Pressable>
-
-      {error && <Text style={s.error}>{error}</Text>}
+    <GradientBackground>
+      {error && <Text className="mt-2 px-5 font-medio text-sm text-peligro">{error}</Text>}
 
       <FlatList
         data={simbolos}
         keyExtractor={(item) => item.id}
         refreshing={cargando}
         onRefresh={recargar}
-        ListEmptyComponent={!cargando ? <Text style={s.vacio}>Aún no hay símbolos. Crea el primero.</Text> : null}
-        contentContainerStyle={{ gap: 10, paddingVertical: 12 }}
+        contentContainerStyle={{ gap: 12, padding: 20, paddingBottom: insets.bottom + 100 }}
+        ListEmptyComponent={
+          !cargando ? (
+            <View className="mt-20 items-center px-6">
+              <View className="mb-4 h-16 w-16 items-center justify-center rounded-full border border-borde bg-campo">
+                <Tags size={28} color={colores.tintaSuave} />
+              </View>
+              <Text className="text-center font-cuerpo text-base leading-6 text-tinta-suave">
+                Los símbolos son las cosas que se repiten en tus sueños, como el agua o una casa. Crea el primero.
+              </Text>
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <Pressable
-            style={s.tarjeta}
             onPress={() => router.push({ pathname: '/simbolos/nuevo', params: { id: item.id } })}
+            className="active:opacity-80"
           >
-            <Text style={s.titulo}>{item.nombre}</Text>
-            {item.significado ? <Text style={s.meta}>{item.significado}</Text> : null}
+            <GlassCard desenfoque={DESENFOQUE_EN_LISTAS} relleno="p-4">
+              <Text className="font-fuerte text-lg text-tinta">{item.nombre}</Text>
+              {item.significado ? (
+                <Text className="mt-1 font-cuerpo text-sm leading-5 text-tinta-suave" numberOfLines={3}>
+                  {item.significado}
+                </Text>
+              ) : null}
+            </GlassCard>
           </Pressable>
         )}
       />
-    </View>
+
+      <View className="absolute left-5 right-5" style={{ bottom: insets.bottom + 16 }}>
+        <Boton
+          texto="Nuevo símbolo"
+          onPress={() => router.push('/simbolos/nuevo')}
+          icono={<Plus size={20} color={colores.tinta} />}
+        />
+      </View>
+    </GradientBackground>
   );
 }
-
-const s = StyleSheet.create({
-  contenedor: { flex: 1, padding: 16 },
-  boton: { backgroundColor: '#8B5CF6', borderRadius: 10, padding: 12, alignItems: 'center' },
-  botonTexto: { color: '#fff', fontWeight: '600' },
-  error: { color: '#DC2626', marginTop: 8 },
-  vacio: { textAlign: 'center', marginTop: 40, color: '#666' },
-  tarjeta: { borderWidth: 1, borderColor: '#ccc', borderRadius: 12, padding: 14 },
-  titulo: { fontSize: 16, fontWeight: '700' },
-  meta: { color: '#666', marginTop: 4 },
-});

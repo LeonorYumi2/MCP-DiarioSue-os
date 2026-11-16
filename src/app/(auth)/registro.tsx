@@ -1,12 +1,21 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { MailCheck, UserPlus } from 'lucide-react-native';
+import { Boton } from '@/components/Boton';
+import { Campo } from '@/components/Campo';
+import { GlassCard } from '@/components/GlassCard';
+import { GradientBackground } from '@/components/GradientBackground';
+import { colores } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { mensajeError } from '@/lib/errores';
 
 export default function Registro() {
-  const { registrar } = useAuth();
+  const { registrar, verificarCodigo, reenviarCodigo } = useAuth();
+  const [paso, setPaso] = useState<'datos' | 'codigo'>('datos');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [codigo, setCodigo] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   async function crearCuenta() {
@@ -17,36 +26,102 @@ export default function Registro() {
     setEnviando(true);
     try {
       const { session } = await registrar(email.trim(), password);
-      if (!session) {
-        Alert.alert('Cuenta creada', 'Revisa tu correo para confirmar la cuenta y luego inicia sesión.');
-      }
+      if (!session) setPaso('codigo');
     } catch (e) {
-      Alert.alert('No se pudo crear la cuenta', e instanceof Error ? e.message : 'Error desconocido');
+      Alert.alert('No se pudo crear la cuenta', mensajeError(e));
     } finally {
       setEnviando(false);
     }
   }
 
+  async function confirmar() {
+    if (codigo.trim().length < 6) {
+      Alert.alert('Código incompleto', 'Escribe el código que llegó a tu correo.');
+      return;
+    }
+    setEnviando(true);
+    try {
+      await verificarCodigo(email.trim(), codigo.trim());
+    } catch (e) {
+      Alert.alert('Código incorrecto o vencido', mensajeError(e));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function reenviar() {
+    try {
+      await reenviarCodigo(email.trim());
+      Alert.alert('Código enviado', 'Te enviamos un código nuevo.');
+    } catch (e) {
+      Alert.alert('No se pudo reenviar', mensajeError(e));
+    }
+  }
+
+  const enCodigo = paso === 'codigo';
+  const Icono = enCodigo ? MailCheck : UserPlus;
+
   return (
-    <View style={s.contenedor}>
-      <Text style={s.titulo}>Crear cuenta</Text>
-      <TextInput style={s.input} placeholder="Correo" autoCapitalize="none"
-        keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <TextInput style={s.input} placeholder="Contraseña (mín. 6)" secureTextEntry
-        value={password} onChangeText={setPassword} />
-      <Pressable style={s.boton} onPress={crearCuenta} disabled={enviando}>
-        {enviando ? <ActivityIndicator /> : <Text style={s.botonTexto}>Registrarme</Text>}
-      </Pressable>
-      <Link href="/login" style={s.enlace}>¿Ya tienes cuenta? Inicia sesión</Link>
-    </View>
+    <GradientBackground areaSegura>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled">
+        <View className="mb-5 h-14 w-14 items-center justify-center rounded-2xl border border-borde bg-campo">
+          <Icono size={26} color={colores.tinta} />
+        </View>
+
+        <Text className="font-titulo text-4xl leading-10 tracking-tight text-tinta">
+          {enCodigo ? 'Revisa tu correo' : 'Crea tu cuenta'}
+        </Text>
+        <Text className="mt-3 font-cuerpo text-base leading-6 text-tinta-suave">
+          {enCodigo
+            ? `Enviamos un código a ${email.trim()}. Escríbelo para activar tu cuenta.`
+            : 'Guarda tus sueños en un lugar privado, solo tuyo.'}
+        </Text>
+
+        <GlassCard className="mt-8" relleno="p-5">
+          {enCodigo ? (
+            <View className="gap-4">
+              <Campo
+                etiqueta="Código de verificación"
+                value={codigo}
+                onChangeText={setCodigo}
+                keyboardType="number-pad"
+                maxLength={10}
+                placeholder="Código"
+              />
+              <Boton texto="Confirmar cuenta" onPress={confirmar} cargando={enviando} className="mt-1" />
+              <Boton texto="Reenviar código" onPress={reenviar} variante="vidrio" />
+            </View>
+          ) : (
+            <View className="gap-4">
+              <Campo
+                etiqueta="Correo"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="tu@correo.com"
+              />
+              <Campo
+                etiqueta="Contraseña"
+                value={password}
+                onChangeText={setPassword}
+                esContrasena
+                placeholder="Mínimo 6 caracteres"
+              />
+              <Boton texto="Crear cuenta" onPress={crearCuenta} cargando={enviando} className="mt-1" />
+            </View>
+          )}
+        </GlassCard>
+
+        <Pressable
+          onPress={() => (enCodigo ? setPaso('datos') : router.push('/login'))}
+          className="mt-6 items-center py-2 active:opacity-70"
+        >
+          <Text className="font-medio text-base text-tinta">
+            {enCodigo ? 'Cambiar correo' : '¿Ya tienes cuenta? Inicia sesión'}
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </GradientBackground>
   );
 }
-
-const s = StyleSheet.create({
-  contenedor: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  titulo: { fontSize: 28, fontWeight: '700', marginBottom: 12 },
-  input: { borderWidth: 1, borderColor: '#999', borderRadius: 10, padding: 12 },
-  boton: { backgroundColor: '#8B5CF6', borderRadius: 10, padding: 14, alignItems: 'center' },
-  botonTexto: { color: '#fff', fontWeight: '600' },
-  enlace: { textAlign: 'center', marginTop: 8 },
-});

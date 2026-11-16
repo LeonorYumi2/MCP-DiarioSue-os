@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+@import 'uniwind';
+
+@theme {
+  /* Una fuente por peso: React Native no cambia el peso de forma dinámica */
+  --font-titulo: 'Fraunces_600SemiBold';
+  --font-cuerpo: 'Manrope_400Regular';
+  --font-medio: 'Manrope_600SemiBold';
+  --font-fuerte: 'Manrope_700Bold';
+
+  --color-medianoche: #0a0b2e;
+  --color-tinta: #f5f3ff;
+  --color-tinta-suave: rgba(245, 243, 255, 0.72);
+  --color-tinta-tenue: rgba(245, 243, 255, 0.45);
+  --color-vidrio: rgba(255, 255, 255, 0.09);
+  --color-campo: rgba(255, 255, 255, 0.08);
+  --color-borde: rgba(255, 255, 255, 0.24);
+  --color-acento: #8b5cf6;
+  --color-peligro: #fda4af;
+}
