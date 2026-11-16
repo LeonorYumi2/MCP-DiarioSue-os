@@ -1,7 +1,6 @@
-import { Platform, StyleSheet, View, type ViewProps } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { StyleSheet, View, type ViewProps } from 'react-native';
+import { GlassView } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useBlurTarget } from '@/components/GradientBackground';
 
 type Props = ViewProps & {
   className?: string;
@@ -18,16 +17,12 @@ export function GlassCard({
   children,
   ...resto
 }: Props) {
-  const objetivo = useBlurTarget();
-
   return (
     <View className={`overflow-hidden rounded-3xl border border-borde ${className}`} {...resto}>
       {desenfoque && (
-        <BlurView
-          blurTarget={Platform.OS === 'android' ? objetivo ?? undefined : undefined}
-          blurMethod="dimezisBlurView"
-          intensity={45}
-          tint="dark"
+        <GlassView
+          glassEffectStyle="clear"
+          tintColor="rgba(139,92,246,0.16)"
           style={StyleSheet.absoluteFill}
         />
       )}

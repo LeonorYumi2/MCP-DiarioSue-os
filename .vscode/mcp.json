@@ -8,6 +8,10 @@
       "type": "http",
       "url": "https://mcp.lottiefiles.com/mcp"
     },
+    "expo": {
+      "type": "http",
+      "url": "https://mcp.expo.dev/mcp"
+    },
     "github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/"

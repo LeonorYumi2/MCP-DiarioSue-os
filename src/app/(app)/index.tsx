@@ -1,5 +1,5 @@
 import { useCallback, type ReactNode } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { LogOut, Moon, Plus, Tags } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -69,7 +69,16 @@ export default function Inicio() {
         <BotonIcono etiqueta="Símbolos" onPress={() => router.push('/simbolos')}>
           <Tags size={20} color={colores.tinta} />
         </BotonIcono>
-        <BotonIcono etiqueta="Cerrar sesión" onPress={() => cerrarSesion()}>
+        <BotonIcono etiqueta="Cerrar sesión" onPress={() =>
+            Alert.alert(
+              'Cerrar sesión',
+              '¿Seguro que quieres salir? Tus sueños seguirán guardados.',
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Salir', style: 'destructive', onPress: () => cerrarSesion() },
+              ]
+            )
+          }>
           <LogOut size={20} color={colores.tinta} />
         </BotonIcono>
       </View>

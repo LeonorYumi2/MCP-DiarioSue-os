@@ -5,10 +5,10 @@ import type { EstadoAnimo } from '@/types';
 type Fuente = ComponentProps<typeof LottieView>['source'];
 
 const ANIMACIONES: Record<EstadoAnimo, Fuente> = {
-  tranquilo: require('../../assets/animations/tranquilo.json'),
-  lucido: require('../../assets/animations/lucido.json'),
-  raro: require('../../assets/animations/raro.json'),
-  pesadilla: require('../../assets/animations/pesadilla.json'),
+  tranquilo: require('../../assets/animations/tranquilo-luna-linea.json'),
+  lucido: require('../../assets/animations/lucido-destello-linea.json'),
+  raro: require('../../assets/animations/raro-espiral-linea.json'),
+  pesadilla: require('../../assets/animations/pesadilla-fantasma-linea.json'),
 };
 
 type Props = {

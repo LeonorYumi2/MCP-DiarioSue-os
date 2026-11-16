@@ -1,16 +1,9 @@
-import { createContext, useContext, useRef, type ReactNode, type RefObject } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BlurTargetView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colores } from '@/constants/theme';
-
-const ContextoBlur = createContext<RefObject<View | null> | null>(null);
-
-export function useBlurTarget() {
-  return useContext(ContextoBlur);
-}
 
 type Props = {
   children: ReactNode;
@@ -19,12 +12,11 @@ type Props = {
 };
 
 export function GradientBackground({ children, areaSegura = false }: Props) {
-  const objetivo = useRef<View | null>(null);
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[s.raiz, areaSegura && { paddingTop: insets.top }]}>
-      <BlurTargetView ref={objetivo} style={StyleSheet.absoluteFill}>
+      <View style={StyleSheet.absoluteFill}>
         <LinearGradient colors={colores.fondo} style={StyleSheet.absoluteFill} />
         <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
           <Defs>
@@ -45,9 +37,9 @@ export function GradientBackground({ children, areaSegura = false }: Props) {
           <Circle cx="100%" cy="46%" r={300} fill="url(#magenta)" />
           <Circle cx="4%" cy="100%" r={320} fill="url(#turquesa)" />
         </Svg>
-      </BlurTargetView>
+      </View>
 
-      <ContextoBlur.Provider value={objetivo}>{children}</ContextoBlur.Provider>
+      {children}
     </View>
   );
 }

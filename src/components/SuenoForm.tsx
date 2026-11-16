@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { Boton } from '@/components/Boton';
@@ -68,85 +68,88 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
   }
 
   return (
-   <ScrollView
-  contentContainerStyle={{ gap: 16, padding: 20, paddingBottom: 48 }}
-  keyboardShouldPersistTaps="handled"
->
-      <GlassCard relleno="p-5">
-        <View className="gap-4">
-          <Campo etiqueta="Título" value={titulo} onChangeText={setTitulo} placeholder="Ej. Volaba sobre el mar" />
-          <Campo
-            etiqueta="Relato"
-            value={relato}
-            onChangeText={setRelato}
-            multilinea
-            placeholder="Cuéntalo con detalle mientras lo recuerdes"
-          />
-        </View>
-      </GlassCard>
-
-      <GlassCard relleno="p-5">
-        <Text className="font-fuerte text-lg text-tinta">Cómo se sintió</Text>
-
-        <View className="my-4 items-center">
-          <View
-            className="h-28 w-28 items-center justify-center overflow-hidden rounded-full"
-            style={{ backgroundColor: `${color}30` }}
-          >
-            <LottieMood estado={estado} tamano={96} />
-          </View>
-        </View>
-
-        <View className="flex-row flex-wrap gap-2">
-          {ESTADOS.map((e) => (
-            <MoodChip
-              key={e}
-              etiqueta={ETIQUETAS[e]}
-              seleccionado={estado === e}
-              color={colorDeEstado(e)}
-              onPress={() => setEstado(e)}
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ gap: 16, padding: 20, paddingBottom: 48 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <GlassCard relleno="p-5">
+          <View className="gap-4">
+            <Campo etiqueta="Título" value={titulo} onChangeText={setTitulo} placeholder="Ej. Volaba sobre el mar" />
+            <Campo
+              etiqueta="Relato"
+              value={relato}
+              onChangeText={setRelato}
+              multilinea
+              placeholder="Cuéntalo con detalle mientras lo recuerdes"
             />
-          ))}
-        </View>
+          </View>
+        </GlassCard>
 
-        <Text className="mb-2 mt-5 font-medio text-sm text-tinta-suave">Intensidad</Text>
-        <View className="flex-row gap-2">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <MoodChip key={n} etiqueta={String(n)} seleccionado={intensidad === n} color={color} onPress={() => setIntensidad(n)} />
-          ))}
-        </View>
-      </GlassCard>
+        <GlassCard relleno="p-5">
+          <Text className="font-fuerte text-lg text-tinta">Cómo se sintió</Text>
 
-      <GlassCard relleno="p-5">
-        <Text className="font-fuerte text-lg text-tinta">Símbolos del sueño</Text>
+          <View className="my-4 items-center">
+            <View
+              className="h-28 w-28 items-center justify-center overflow-hidden rounded-full"
+              style={{ backgroundColor: `${color}30` }}
+            >
+              <LottieMood estado={estado} tamano={96} />
+            </View>
+          </View>
 
-        {simbolos.length === 0 ? (
-          <Pressable
-            onPress={() => router.push('/simbolos/nuevo')}
-            className="mt-3 flex-row items-center gap-2 active:opacity-70"
-          >
-            <Plus size={18} color={colores.acento} />
-            <Text className="font-medio text-base text-tinta">Crea tu primer símbolo</Text>
-          </Pressable>
-        ) : (
-          <View className="mt-3 flex-row flex-wrap gap-2">
-            {simbolos.map((sim) => (
+          <View className="flex-row flex-wrap gap-2">
+            {ESTADOS.map((e) => (
               <MoodChip
-                key={sim.id}
-                etiqueta={sim.nombre}
-                seleccionado={elegidos.includes(sim.id)}
-                onPress={() => alternar(sim.id)}
+                key={e}
+                etiqueta={ETIQUETAS[e]}
+                seleccionado={estado === e}
+                color={colorDeEstado(e)}
+                onPress={() => setEstado(e)}
               />
             ))}
           </View>
-        )}
-      </GlassCard>
 
-      {error && <Text className="font-medio text-sm text-peligro">{error}</Text>}
+          <Text className="mb-2 mt-5 font-medio text-sm text-tinta-suave">Intensidad</Text>
+          <View className="flex-row gap-2">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <MoodChip key={n} etiqueta={String(n)} seleccionado={intensidad === n} color={color} onPress={() => setIntensidad(n)} />
+            ))}
+          </View>
+        </GlassCard>
 
-      <Boton texto={textoBoton} onPress={enviar} cargando={guardando} />
+        <GlassCard relleno="p-5">
+          <Text className="font-fuerte text-lg text-tinta">Símbolos del sueño</Text>
 
-      {children}
-    </ScrollView>
+          {simbolos.length === 0 ? (
+            <Pressable
+              onPress={() => router.push('/simbolos/nuevo')}
+              className="mt-3 flex-row items-center gap-2 active:opacity-70"
+            >
+              <Plus size={18} color={colores.acento} />
+              <Text className="font-medio text-base text-tinta">Crea tu primer símbolo</Text>
+            </Pressable>
+          ) : (
+            <View className="mt-3 flex-row flex-wrap gap-2">
+              {simbolos.map((sim) => (
+                <MoodChip
+                  key={sim.id}
+                  etiqueta={sim.nombre}
+                  seleccionado={elegidos.includes(sim.id)}
+                  onPress={() => alternar(sim.id)}
+                />
+              ))}
+            </View>
+          )}
+        </GlassCard>
+
+        {error && <Text className="font-medio text-sm text-peligro">{error}</Text>}
+
+        <Boton texto={textoBoton} onPress={enviar} cargando={guardando} />
+
+        {children}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
