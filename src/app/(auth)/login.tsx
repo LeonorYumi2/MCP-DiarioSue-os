@@ -1,17 +1,28 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { Moon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
+import { EmblemaCelestial } from '@/components/EmblemaCelestial';
 import { GlassCard } from '@/components/GlassCard';
 import { GradientBackground } from '@/components/GradientBackground';
-import { colores } from '@/constants/theme';
+import { colores, fuentes } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { mensajeError } from '@/lib/errores';
 
 export default function Login() {
+  const insets = useSafeAreaInsets();
   const { iniciarSesion } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,25 +47,37 @@ export default function Login() {
 
   return (
     <GradientBackground areaSegura>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
+          contentContainerStyle={[
+            s.scrollContenido,
+            {
+              paddingTop: Math.max(insets.top + 8, 28),
+              paddingBottom: Math.max(insets.bottom + 16, 32),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-5 h-14 w-14 items-center justify-center rounded-2xl border border-borde bg-campo">
-            <Moon size={26} color={colores.tinta} />
-          </View>
+          {/* 1. Emblema celestial proporcionado */}
+          <EmblemaCelestial />
 
-          <Text className="font-titulo text-5xl leading-13 tracking-tight text-tinta">
+          {/* 2. Título principal en Fraunces */}
+          <Text style={s.tituloApp}>
             Diario{'\n'}de sueños
           </Text>
-          <Text className="mt-3 font-cuerpo text-base leading-6 text-tinta-suave">
+
+          {/* 3. Frase cálida en Manrope */}
+          <Text style={s.subtituloApp}>
             Anota lo que soñaste antes de que se te olvide.
           </Text>
 
-          <GlassCard className="mt-8" relleno="p-5">
-            <View className="gap-4">
+          {/* 4. Tarjeta Liquid Glass del formulario */}
+          <GlassCard className="mt-7" relleno="p-5">
+            <View style={s.formularioGap}>
               <Campo
                 etiqueta="Correo"
                 value={email}
@@ -74,11 +97,78 @@ export default function Login() {
             </View>
           </GlassCard>
 
-          <Pressable onPress={() => router.push('/registro')} className="mt-6 items-center py-2 active:opacity-70">
-            <Text className="font-medio text-base text-tinta">¿Primera vez? Crea tu cuenta</Text>
+          {/* 5. Enlace refinado para crear diario */}
+          <Pressable
+            onPress={() => router.push('/registro')}
+            accessibilityRole="button"
+            accessibilityLabel="¿Aún no tienes un diario? Comienza el tuyo"
+            hitSlop={8}
+            style={({ pressed }) => [
+              s.enlaceRegistro,
+              pressed && s.enlacePresionado,
+            ]}
+          >
+            <Text style={s.textoRegistroContenedor}>
+              <Text style={s.textoRegistroPregunta}>¿Aún no tienes un diario? </Text>
+              <Text style={s.textoRegistroAccion}>Comienza el tuyo</Text>
+            </Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </GradientBackground>
   );
 }
+
+const s = StyleSheet.create({
+  scrollContenido: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  emblemaContenedor: {
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+  },
+  tituloApp: {
+    fontFamily: fuentes.titulo,
+    fontSize: 42,
+    lineHeight: 48,
+    letterSpacing: -0.5,
+    color: colores.tinta,
+  },
+  subtituloApp: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colores.tintaSuave,
+    marginTop: 8,
+    maxWidth: 320,
+  },
+  formularioGap: {
+    gap: 16,
+  },
+  enlaceRegistro: {
+    marginTop: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  enlacePresionado: {
+    opacity: 0.72,
+  },
+  textoRegistroContenedor: {
+    textAlign: 'center',
+  },
+  textoRegistroPregunta: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 14.5,
+    color: colores.tintaSuave,
+  },
+  textoRegistroAccion: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 14.5,
+    color: colores.lavanda,
+    letterSpacing: 0.2,
+  },
+});

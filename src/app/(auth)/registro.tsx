@@ -1,17 +1,28 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { MailCheck, UserPlus } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
+import { EmblemaCelestial } from '@/components/EmblemaCelestial';
 import { GlassCard } from '@/components/GlassCard';
 import { GradientBackground } from '@/components/GradientBackground';
-import { colores } from '@/constants/theme';
+import { colores, fuentes } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { mensajeError } from '@/lib/errores';
 
 export default function Registro() {
+  const insets = useSafeAreaInsets();
   const { registrar, verificarCodigo, reenviarCodigo } = useAuth();
   const [paso, setPaso] = useState<'datos' | 'codigo'>('datos');
   const [email, setEmail] = useState('');
@@ -66,45 +77,65 @@ export default function Registro() {
   }
 
   const enCodigo = paso === 'codigo';
-  const Icono = enCodigo ? MailCheck : UserPlus;
 
   return (
     <GradientBackground areaSegura>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
+          contentContainerStyle={[
+            s.scrollContenido,
+            {
+              paddingTop: Math.max(insets.top + 8, 28),
+              paddingBottom: Math.max(insets.bottom + 16, 32),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-5 h-14 w-14 items-center justify-center rounded-2xl border border-borde bg-campo">
-            <Icono size={26} color={colores.tinta} />
-          </View>
+          {/* 1. Emblema celestial proporcionado */}
+          <EmblemaCelestial tamano={66} style={s.emblemaContenedor} />
 
-          <Text className="font-titulo text-4xl leading-10 tracking-tight text-tinta">
+          {/* 2. Título principal en Fraunces */}
+          <Text style={s.tituloApp}>
             {enCodigo ? 'Revisa tu correo' : 'Crea tu cuenta'}
           </Text>
-          <Text className="mt-3 font-cuerpo text-base leading-6 text-tinta-suave">
+
+          {/* 3. Subtítulo cálido en Manrope */}
+          <Text style={s.subtituloApp}>
             {enCodigo
               ? `Enviamos un código a ${email.trim()}. Escríbelo para activar tu cuenta.`
-              : 'Guarda tus sueños en un lugar privado, solo tuyo.'}
+              : 'Un espacio para guardar cada sueño que quieras recordar.'}
           </Text>
 
-          <GlassCard className="mt-8" relleno="p-5">
+          {/* 4. Tarjeta Liquid Glass con campos */}
+          <GlassCard className="mt-7" relleno="p-5">
             {enCodigo ? (
-              <View className="gap-4">
+              <View style={s.formularioGap}>
                 <Campo
                   etiqueta="Código de verificación"
                   value={codigo}
                   onChangeText={setCodigo}
                   keyboardType="number-pad"
                   maxLength={10}
-                  placeholder="Código"
+                  placeholder="123456"
                 />
-                <Boton texto="Confirmar cuenta" onPress={confirmar} cargando={enviando} className="mt-1" />
-                <Boton texto="Reenviar código" onPress={reenviar} variante="vidrio" />
+                <Boton
+                  texto="Confirmar cuenta"
+                  onPress={confirmar}
+                  cargando={enviando}
+                  className="mt-1"
+                />
+                <Boton
+                  texto="Reenviar código"
+                  onPress={reenviar}
+                  variante="vidrio"
+                />
               </View>
             ) : (
-              <View className="gap-4">
+              <View style={s.formularioGap}>
                 <Campo
                   etiqueta="Correo"
                   value={email}
@@ -120,21 +151,99 @@ export default function Registro() {
                   esContrasena
                   placeholder="Mínimo 6 caracteres"
                 />
-                <Boton texto="Crear cuenta" onPress={crearCuenta} cargando={enviando} className="mt-1" />
+                <Boton
+                  texto="Crear cuenta"
+                  onPress={crearCuenta}
+                  cargando={enviando}
+                  className="mt-1"
+                />
               </View>
             )}
           </GlassCard>
 
+          {/* 5. Enlace refinado hacia Login o cambio de correo */}
           <Pressable
             onPress={() => (enCodigo ? setPaso('datos') : router.push('/login'))}
-            className="mt-6 items-center py-2 active:opacity-70"
+            accessibilityRole="button"
+            accessibilityLabel={
+              enCodigo
+                ? '¿Correo incorrecto? Cambiar correo'
+                : '¿Ya tienes un diario? Inicia sesión'
+            }
+            hitSlop={8}
+            style={({ pressed }) => [
+              s.enlaceAccion,
+              pressed && s.enlacePresionado,
+            ]}
           >
-            <Text className="font-medio text-base text-tinta">
-              {enCodigo ? 'Cambiar correo' : '¿Ya tienes cuenta? Inicia sesión'}
-            </Text>
+            {enCodigo ? (
+              <Text style={s.textoEnlaceContenedor}>
+                <Text style={s.textoEnlacePregunta}>¿Correo incorrecto? </Text>
+                <Text style={s.textoEnlaceAccion}>Cambiar correo</Text>
+              </Text>
+            ) : (
+              <Text style={s.textoEnlaceContenedor}>
+                <Text style={s.textoEnlacePregunta}>¿Ya tienes un diario? </Text>
+                <Text style={s.textoEnlaceAccion}>Inicia sesión</Text>
+              </Text>
+            )}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </GradientBackground>
   );
 }
+
+const s = StyleSheet.create({
+  scrollContenido: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  emblemaContenedor: {
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+  },
+  tituloApp: {
+    fontFamily: fuentes.titulo,
+    fontSize: 40,
+    lineHeight: 46,
+    letterSpacing: -0.5,
+    color: colores.tinta,
+  },
+  subtituloApp: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colores.tintaSuave,
+    marginTop: 8,
+    maxWidth: 320,
+  },
+  formularioGap: {
+    gap: 16,
+  },
+  enlaceAccion: {
+    marginTop: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  enlacePresionado: {
+    opacity: 0.72,
+  },
+  textoEnlaceContenedor: {
+    textAlign: 'center',
+  },
+  textoEnlacePregunta: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 14.5,
+    color: colores.tintaSuave,
+  },
+  textoEnlaceAccion: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 14.5,
+    color: colores.lavanda,
+    letterSpacing: 0.2,
+  },
+});

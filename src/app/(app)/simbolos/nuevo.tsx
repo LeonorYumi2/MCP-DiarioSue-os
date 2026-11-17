@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
 import { GlassCard } from '@/components/GlassCard';
 import { GradientBackground } from '@/components/GradientBackground';
+import { ModalConfirmacion } from '@/components/ModalConfirmacion';
 import { colores } from '@/constants/theme';
 import { useSimbolos } from '@/hooks/useSimbolos';
 import { mensajeError } from '@/lib/errores';
@@ -21,6 +23,8 @@ export default function FormularioSimbolo() {
   const [listo, setListo] = useState(!id);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -52,22 +56,16 @@ export default function FormularioSimbolo() {
     }
   }
 
-  function confirmarBorrado() {
-    Alert.alert('Eliminar símbolo', 'Se quitará también de los sueños que lo usan.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await borrar(id!);
-            router.back();
-          } catch (e) {
-            Alert.alert('No se pudo eliminar', mensajeError(e));
-          }
-        },
-      },
-    ]);
+  async function ejecutarBorrado() {
+    setEliminando(true);
+    try {
+      await borrar(id!);
+      setModalEliminarVisible(false);
+      router.back();
+    } catch (e) {
+      setEliminando(false);
+      Alert.alert('No se pudo eliminar', mensajeError(e));
+    }
   }
 
   return (
@@ -105,8 +103,31 @@ export default function FormularioSimbolo() {
 
           <Boton texto={editando ? 'Guardar cambios' : 'Guardar símbolo'} onPress={guardar} cargando={guardando} />
 
-          {editando && <Boton texto="Eliminar símbolo" onPress={confirmarBorrado} variante="peligro" />}
+          {editando && (
+            <Boton
+              texto="Eliminar símbolo"
+              onPress={() => setModalEliminarVisible(true)}
+              variante="peligro"
+            />
+          )}
         </ScrollView>
+      )}
+
+      {editando && (
+        <ModalConfirmacion
+          visible={modalEliminarVisible}
+          titulo="¿Eliminar este símbolo?"
+          descripcion="Se quitará también de los sueños que lo utilizan."
+          textoCancelar="Conservar símbolo"
+          textoConfirmar="Eliminar símbolo"
+          onCancelar={() => {
+            if (!eliminando) setModalEliminarVisible(false);
+          }}
+          onConfirmar={ejecutarBorrado}
+          cargando={eliminando}
+          variante="peligro"
+          icono={<Trash2 size={24} color={colores.error} />}
+        />
       )}
     </GradientBackground>
   );

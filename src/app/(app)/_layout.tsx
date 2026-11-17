@@ -16,12 +16,12 @@ export default function AppLayout() {
           <View style={StyleSheet.absoluteFill}>
             <GlassView
               glassEffectStyle="clear"
-              tintColor="rgba(6, 7, 27, 0.72)"
+              tintColor="rgba(6, 7, 27, 0.85)"
               style={StyleSheet.absoluteFill}
             />
             <View
               pointerEvents="none"
-              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(6, 7, 27, 0.45)' }]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(6, 7, 27, 0.94)' }]}
             />
             <View
               pointerEvents="none"
@@ -31,7 +31,7 @@ export default function AppLayout() {
                 left: 0,
                 right: 0,
                 height: StyleSheet.hairlineWidth,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'rgba(255, 255, 255, 0.14)',
               }}
             />
           </View>

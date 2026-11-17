@@ -83,15 +83,14 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
     setGuardando(true);
     setError(null);
     try {
-      mostrarExito();
       await onGuardar(
         { titulo: titulo.trim(), relato: relato.trim() || null, estado_animo: estado, intensidad },
         elegidos
       );
+      mostrarExito();
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      router.back();
     } catch (e) {
-      setGuardadoExitoso(false);
-      exitoOpacidad.stopAnimation();
-      Animated.timing(exitoOpacidad, { toValue: 0, duration: 100, useNativeDriver: true }).start();
       setError(mensajeError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);

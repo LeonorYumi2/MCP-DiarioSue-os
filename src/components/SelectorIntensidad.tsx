@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Sparkles } from 'lucide-react-native';
-import { colores, fuentes } from '@/constants/theme';
+import { colores, fuentes } from "@/constants/theme";
+import { Sparkles } from "lucide-react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type Props = {
   valor: number;
@@ -9,14 +9,18 @@ type Props = {
 };
 
 const DESCRIPCIONES: Record<number, string> = {
-  1: 'Muy tenue',
-  2: 'Leve',
-  3: 'Moderado',
-  4: 'Intenso',
-  5: 'Muy intenso',
+  1: "Muy tenue",
+  2: "Leve",
+  3: "Moderado",
+  4: "Intenso",
+  5: "Muy intenso",
 };
 
-export function SelectorIntensidad({ valor, onChange, color = colores.acento }: Props) {
+export function SelectorIntensidad({
+  valor,
+  onChange,
+  color = colores.acento,
+}: Props) {
   return (
     <View style={s.contenedor}>
       <View style={s.fila}>
@@ -35,7 +39,10 @@ export function SelectorIntensidad({ valor, onChange, color = colores.acento }: 
                 style={[
                   s.circulo,
                   activa
-                    ? { backgroundColor: `${color}28`, borderColor: `${color}99` }
+                    ? {
+                        backgroundColor: `${color}28`,
+                        borderColor: `${color}99`,
+                      }
                     : s.circuloInactivo,
                 ]}
               >
@@ -49,24 +56,24 @@ export function SelectorIntensidad({ valor, onChange, color = colores.acento }: 
           );
         })}
       </View>
-      <Text style={s.descripcion}>{DESCRIPCIONES[valor] ?? ''}</Text>
+      <Text style={s.descripcion}>{DESCRIPCIONES[valor] ?? ""}</Text>
     </View>
   );
 }
 
 const s = StyleSheet.create({
   contenedor: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 10,
   },
   fila: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   boton: {
     minWidth: 50,
-    alignItems: 'center',
+    alignItems: "center",
   },
   botonPresionado: {
     opacity: 0.75,
@@ -77,12 +84,12 @@ const s = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   circuloInactivo: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderColor: "rgba(255, 255, 255, 0.12)",
   },
   descripcion: {
     fontFamily: fuentes.medio,
@@ -91,4 +98,3 @@ const s = StyleSheet.create({
     letterSpacing: 0.3,
   },
 });
-

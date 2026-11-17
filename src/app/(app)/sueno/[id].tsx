@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Trash2 } from 'lucide-react-native';
 import { Boton } from '@/components/Boton';
 import { GradientBackground } from '@/components/GradientBackground';
+import { ModalConfirmacion } from '@/components/ModalConfirmacion';
 import { SuenoForm } from '@/components/SuenoForm';
 import { colores } from '@/constants/theme';
 import { useSuenos } from '@/hooks/useSuenos';
@@ -15,6 +17,8 @@ export default function EditarSueno() {
   const [sueno, setSueno] = useState<Sueno | null>(null);
   const [seleccion, setSeleccion] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     Promise.all([obtener(id), listarSimbolosDeSueno(id)])
@@ -25,22 +29,16 @@ export default function EditarSueno() {
       .catch((e) => setError(mensajeError(e, 'No se pudo cargar el sueño.')));
   }, [id, obtener, listarSimbolosDeSueno]);
 
-  function confirmarBorrado() {
-    Alert.alert('Eliminar sueño', 'Esta acción no se puede deshacer.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await borrar(id);
-            router.back();
-          } catch (e) {
-            Alert.alert('No se pudo eliminar', mensajeError(e));
-          }
-        },
-      },
-    ]);
+  async function ejecutarBorrado() {
+    setEliminando(true);
+    try {
+      await borrar(id);
+      setModalEliminarVisible(false);
+      router.back();
+    } catch (e) {
+      setEliminando(false);
+      Alert.alert('No se pudo eliminar', mensajeError(e));
+    }
   }
 
   if (error || !sueno || !seleccion) {
@@ -66,11 +64,29 @@ export default function EditarSueno() {
         onGuardar={async (datos, simboloIds) => {
           await actualizar(id, datos);
           await guardarSimbolos(id, simboloIds);
-          router.back();
         }}
       >
-        <Boton texto="Eliminar sueño" onPress={confirmarBorrado} variante="peligro" />
+        <Boton
+          texto="Eliminar sueño"
+          onPress={() => setModalEliminarVisible(true)}
+          variante="peligro"
+        />
       </SuenoForm>
+
+      <ModalConfirmacion
+        visible={modalEliminarVisible}
+        titulo="¿Eliminar este sueño?"
+        descripcion="Esta acción no se puede deshacer."
+        textoCancelar="Conservar sueño"
+        textoConfirmar="Eliminar sueño"
+        onCancelar={() => {
+          if (!eliminando) setModalEliminarVisible(false);
+        }}
+        onConfirmar={ejecutarBorrado}
+        cargando={eliminando}
+        variante="peligro"
+        icono={<Trash2 size={24} color={colores.error} />}
+      />
     </GradientBackground>
   );
 }

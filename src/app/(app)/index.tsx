@@ -13,14 +13,17 @@ import Animated, {
 import LottieView from 'lottie-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { LogOut, Plus, Sparkles, Tags } from 'lucide-react-native';
+import { BookOpen, Moon, Plus, Power, Sparkles } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bienvenida } from '@/components/Bienvenida';
+import { Despedida } from '@/components/Despedida';
 import { GradientBackground } from '@/components/GradientBackground';
+import { ModalConfirmacion } from '@/components/ModalConfirmacion';
 import { SuenoCard } from '@/components/SuenoCard';
 import { colores, fuentes } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuenos } from '@/hooks/useSuenos';
+import { mensajeError } from '@/lib/errores';
 import type { SuenoConSimbolos } from '@/types';
 
 function BotonAccion({
@@ -97,6 +100,9 @@ export default function Inicio() {
   const { suenos, cargando, error, recargar } = useSuenos();
   const insets = useSafeAreaInsets();
   const [mostrarBienvenida, setMostrarBienvenida] = useState(false);
+  const [modalSalirVisible, setModalSalirVisible] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
+  const [mostrarDespedida, setMostrarDespedida] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('@diario_suenos:mostrar_bienvenida')
@@ -123,15 +129,19 @@ export default function Inicio() {
     }, [recargar])
   );
 
-  function confirmarCierreSesion() {
-    Alert.alert(
-      'Cerrar sesión',
-      '¿Seguro que quieres salir? Tus sueños seguirán guardados.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: () => cerrarSesion() },
-      ]
-    );
+  async function ejecutarCierreSesion() {
+    setModalSalirVisible(false);
+    setMostrarDespedida(true);
+    setSaliendo(true);
+    try {
+      // Permitir que la animación de despedida se disfrute por ~1.8 segundos
+      await new Promise((resolve) => setTimeout(resolve, 1800));
+      await cerrarSesion();
+    } catch (e) {
+      setMostrarDespedida(false);
+      setSaliendo(false);
+      Alert.alert('No se pudo cerrar sesión', mensajeError(e));
+    }
   }
 
   // Extracción de nombre de usuario para el saludo discreto
@@ -161,11 +171,11 @@ export default function Inicio() {
         {/* Botones de acción superior */}
         <View style={s.cabeceraBotones}>
           <BotonAccion etiqueta="Glosario de símbolos" onPress={() => router.push('/simbolos')}>
-            <Tags size={19} color={colores.tinta} />
+            <BookOpen size={21} color={colores.tinta} strokeWidth={2.2} />
           </BotonAccion>
 
-          <BotonAccion etiqueta="Cerrar sesión" onPress={confirmarCierreSesion}>
-            <LogOut size={19} color={colores.tinta} />
+          <BotonAccion etiqueta="Cerrar sesión" onPress={() => setModalSalirVisible(true)}>
+            <Power size={21} color={colores.tinta} strokeWidth={2.2} />
           </BotonAccion>
         </View>
       </View>
@@ -266,6 +276,23 @@ export default function Inicio() {
           />
         </Animated.View>
       )}
+
+      {/* Modal de confirmación para cerrar sesión */}
+      <ModalConfirmacion
+        visible={modalSalirVisible}
+        titulo="¿Es hora de descansar?"
+        descripcion="Tus sueños están guardados. Puedes regresar cuando quieras."
+        textoCancelar="Seguir soñando"
+        textoConfirmar="Cerrar sesión"
+        onCancelar={() => setModalSalirVisible(false)}
+        onConfirmar={ejecutarCierreSesion}
+        cargando={saliendo}
+        variante="primario"
+        icono={<Moon size={24} color={colores.celeste} />}
+      />
+
+      {/* Experiencia de despedida animada */}
+      {mostrarDespedida && <Despedida />}
     </GradientBackground>
   );
 }
@@ -307,18 +334,18 @@ const s = StyleSheet.create({
   cabeceraBotones: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     marginTop: 4,
   },
   botonAccion: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 21,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(167, 139, 250, 0.28)',
+    backgroundColor: 'rgba(22, 16, 48, 0.72)',
   },
   contadorFila: {
     paddingHorizontal: 20,

@@ -1,6 +1,4 @@
-import { colores, fuentes } from "@/constants/theme";
-import { Eye, EyeOff } from "lucide-react-native";
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -32,12 +30,16 @@ export function Campo({
   const [enfocado, setEnfocado] = useState(false);
   const Icono = visible ? EyeOff : Eye;
 
-  function handleFocus(...args: Parameters<NonNullable<TextInputProps['onFocus']>>) {
+  function handleFocus(
+    ...args: Parameters<NonNullable<TextInputProps["onFocus"]>>
+  ) {
     setEnfocado(true);
     onFocus?.(...args);
   }
 
-  function handleBlur(...args: Parameters<NonNullable<TextInputProps['onBlur']>>) {
+  function handleBlur(
+    ...args: Parameters<NonNullable<TextInputProps["onBlur"]>>
+  ) {
     setEnfocado(false);
     onBlur?.(...args);
   }
