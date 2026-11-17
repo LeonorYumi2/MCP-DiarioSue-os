@@ -1,51 +1,94 @@
+/* eslint-disable react-hooks/immutability */
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import LottieView from 'lottie-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { LogOut, Moon, Plus, Tags } from 'lucide-react-native';
+import { LogOut, Plus, Sparkles, Tags } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bienvenida } from '@/components/Bienvenida';
-import { Boton } from '@/components/Boton';
-import { GlassCard } from '@/components/GlassCard';
 import { GradientBackground } from '@/components/GradientBackground';
-import { DESENFOQUE_EN_LISTAS, colorDeEstado, colores } from '@/constants/theme';
+import { SuenoCard } from '@/components/SuenoCard';
+import { colores, fuentes } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuenos } from '@/hooks/useSuenos';
+import type { SuenoConSimbolos } from '@/types';
 
-function formatearFecha(fecha?: string | null) {
-  if (!fecha) return '';
-  return new Date(`${fecha}T00:00:00`).toLocaleDateString('es-EC', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-}
+function BotonAccion({
+  onPress,
+  etiqueta,
+  children,
+}: {
+  onPress: () => void;
+  etiqueta: string;
+  children: ReactNode;
+}) {
+  const scale = useSharedValue(1);
 
-function Intensidad({ valor, color }: { valor: number | null; color: string }) {
+  const estiloAnimado = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <View className="flex-row gap-1.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <View
-          key={n}
-          className={`h-2 w-2 rounded-full ${n <= (valor ?? 0) ? '' : 'bg-white/20'}`}
-          style={n <= (valor ?? 0) ? { backgroundColor: color } : undefined}
-        />
-      ))}
-    </View>
+    <Animated.View style={estiloAnimado}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => (scale.value = withTiming(0.92, { duration: 80 }))}
+        onPressOut={() => (scale.value = withSpring(1, { damping: 14, stiffness: 220 }))}
+        accessibilityRole="button"
+        accessibilityLabel={etiqueta}
+        style={s.botonAccion}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
   );
 }
 
-function BotonIcono({ onPress, etiqueta, children }: { onPress: () => void; etiqueta: string; children: ReactNode }) {
+function BotonFlotante({ onPress }: { onPress: () => void }) {
+  const insets = useSafeAreaInsets();
+  const scale = useSharedValue(1);
+
+  const estiloAnimado = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={etiqueta}
-      className="h-11 w-11 items-center justify-center rounded-full border border-borde bg-campo active:opacity-70"
+    <Animated.View
+      style={[
+        s.flotanteContenedor,
+        { bottom: Math.max(insets.bottom, 16) + 12 },
+        estiloAnimado,
+      ]}
     >
-      {children}
-    </Pressable>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => (scale.value = withTiming(0.94, { duration: 90 }))}
+        onPressOut={() => (scale.value = withSpring(1, { damping: 15, stiffness: 220 }))}
+        accessibilityRole="button"
+        accessibilityLabel="Registrar un nuevo sueño"
+        style={s.flotantePressable}
+      >
+        <LinearGradient
+          colors={[colores.acento, colores.acentoFin]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.flotanteGradiente}
+        >
+          <Plus size={20} color={colores.tinta} strokeWidth={2.4} />
+          <Text style={s.flotanteTexto}>Nuevo sueño</Text>
+        </LinearGradient>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -80,99 +123,137 @@ export default function Inicio() {
     }, [recargar])
   );
 
+  function confirmarCierreSesion() {
+    Alert.alert(
+      'Cerrar sesión',
+      '¿Seguro que quieres salir? Tus sueños seguirán guardados.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Salir', style: 'destructive', onPress: () => cerrarSesion() },
+      ]
+    );
+  }
+
+  // Extracción de nombre de usuario para el saludo discreto
+  const nombreUsuario =
+    session?.user?.user_metadata?.nombre ??
+    session?.user?.user_metadata?.name ??
+    session?.user?.email?.split('@')[0];
+  const nombreLimpio = nombreUsuario
+    ? nombreUsuario.trim().split(' ')[0]
+    : null;
+  const saludo = nombreLimpio
+    ? `Hola, ${nombreLimpio.charAt(0).toUpperCase() + nombreLimpio.slice(1)}`
+    : 'Buenas noches';
+
   return (
     <GradientBackground areaSegura>
-      <View className="flex-row items-center gap-2 px-5 pt-3">
-        <View className="flex-1">
-          <Text className="font-titulo text-4xl tracking-tight text-tinta">Tus sueños</Text>
-          <Text className="mt-0.5 font-cuerpo text-sm text-tinta-suave">
-            {suenos.length === 1 ? '1 sueño anotado' : `${suenos.length} sueños anotados`}
+      {/* Encabezado elegante del diario */}
+      <View style={[s.cabecera, { paddingTop: insets.top > 0 ? 8 : 16 }]}>
+        <View style={s.cabeceraInfo}>
+          <Text style={s.cabeceraSaludo}>{saludo}</Text>
+          <Text style={s.cabeceraTitulo}>Diario de sueños</Text>
+          <Text style={s.cabeceraFrase}>
+            Cada sueño es una ventana a tu mundo interior.
           </Text>
         </View>
-        <BotonIcono etiqueta="Símbolos" onPress={() => router.push('/simbolos')}>
-          <Tags size={20} color={colores.tinta} />
-        </BotonIcono>
-        <BotonIcono etiqueta="Cerrar sesión" onPress={() =>
-            Alert.alert(
-              'Cerrar sesión',
-              '¿Seguro que quieres salir? Tus sueños seguirán guardados.',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                { text: 'Salir', style: 'destructive', onPress: () => cerrarSesion() },
-              ]
-            )
-          }>
-          <LogOut size={20} color={colores.tinta} />
-        </BotonIcono>
+
+        {/* Botones de acción superior */}
+        <View style={s.cabeceraBotones}>
+          <BotonAccion etiqueta="Glosario de símbolos" onPress={() => router.push('/simbolos')}>
+            <Tags size={19} color={colores.tinta} />
+          </BotonAccion>
+
+          <BotonAccion etiqueta="Cerrar sesión" onPress={confirmarCierreSesion}>
+            <LogOut size={19} color={colores.tinta} />
+          </BotonAccion>
+        </View>
       </View>
 
-      {error && <Text className="mt-2 px-5 font-medio text-sm text-peligro">{error}</Text>}
+      {/* Contador de sueños sutil */}
+      {!cargando && suenos.length > 0 && (
+        <View style={s.contadorFila}>
+          <View style={s.contadorBadge}>
+            <Sparkles size={13} color={colores.celeste} />
+            <Text style={s.contadorTexto}>
+              {suenos.length === 1 ? '1 sueño registrado' : `${suenos.length} sueños registrados`}
+            </Text>
+          </View>
+        </View>
+      )}
 
-      <FlatList
+      {/* Mensaje de error si la carga falla */}
+      {error && <Text style={s.errorTexto}>{error}</Text>}
+
+      {/* Listado de tarjetas de sueños */}
+      <FlatList<SuenoConSimbolos>
         data={suenos}
         keyExtractor={(item) => item.id}
         refreshing={cargando}
         onRefresh={recargar}
-        contentContainerStyle={{ gap: 14, padding: 20, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          s.listaContenido,
+          { paddingBottom: insets.bottom + 110 },
+        ]}
         ListEmptyComponent={
-          !cargando ? (
-            <View className="mt-20 items-center px-6">
-              <View className="mb-4 h-16 w-16 items-center justify-center rounded-full border border-borde bg-campo">
-                <Moon size={28} color={colores.tintaSuave} />
+          !cargando && !error ? (
+            <View style={s.vacioContenedor}>
+              <View style={s.vacioAura}>
+                <LottieView
+                  source={require('../../../assets/animations/tranquilo.json')}
+                  autoPlay
+                  loop
+                  style={s.vacioLottie}
+                />
               </View>
-              <Text className="text-center font-cuerpo text-base leading-6 text-tinta-suave">
-                Aún no hay sueños. Anota el primero antes de que se te olvide.
+
+              <Text style={s.vacioTitulo}>
+                «Aquí comenzará tu universo de sueños»
               </Text>
+
+              <Text style={s.vacioDescripcion}>
+                Anota lo que viviste antes de que se desvanezca en la vigilia. Cada detalle guarda un mensaje para ti.
+              </Text>
+
+              <Pressable
+                onPress={() => router.push('/sueno/nuevo')}
+                accessibilityRole="button"
+                accessibilityLabel="Registrar mi primer sueño"
+                style={s.vacioBoton}
+              >
+                <LinearGradient
+                  colors={[colores.acento, colores.acentoFin]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.vacioBotonGradiente}
+                >
+                  <Plus size={18} color={colores.tinta} strokeWidth={2.4} />
+                  <Text style={s.vacioBotonTexto}>Registrar mi primer sueño</Text>
+                </LinearGradient>
+              </Pressable>
             </View>
           ) : null
         }
-        renderItem={({ item }) => {
-          const color = colorDeEstado(item.estado_animo);
-          return (
-            <Pressable
-              onPress={() => router.push({ pathname: '/sueno/[id]', params: { id: item.id } })}
-              className="active:opacity-80"
-            >
-              <GlassCard desenfoque={DESENFOQUE_EN_LISTAS} acento={color} relleno="py-4 pl-5 pr-4">
-                <View className="flex-row items-baseline gap-2.5">
-                  <Text className="flex-1 font-fuerte text-lg text-tinta" numberOfLines={1}>
-                    {item.titulo}
-                  </Text>
-                  <Text className="font-medio text-xs text-tinta-tenue">{formatearFecha(item.fecha)}</Text>
-                </View>
-
-                {item.relato ? (
-                  <Text className="mt-1.5 font-cuerpo text-sm leading-5 text-tinta-suave" numberOfLines={2}>
-                    {item.relato}
-                  </Text>
-                ) : null}
-
-                <View className="mt-3 flex-row items-center justify-between">
-                  <Text className="font-fuerte text-sm" style={{ color }}>
-                    {item.estado_animo ?? 'sin estado'}
-                  </Text>
-                  <Intensidad valor={item.intensidad} color={color} />
-                </View>
-
-                {item.simbolos.length > 0 && (
-                  <Text className="mt-2.5 font-medio text-sm text-tinta-suave" numberOfLines={1}>
-                    {item.simbolos.map((n) => `#${n}`).join('   ')}
-                  </Text>
-                )}
-              </GlassCard>
-            </Pressable>
-          );
-        }}
+        renderItem={({ item, index }) => (
+          <SuenoCard
+            sueno={item}
+            index={index}
+            onPress={() =>
+              router.push({
+                pathname: '/sueno/[id]',
+                params: { id: item.id },
+              })
+            }
+          />
+        )}
       />
 
-      <View className="absolute left-5 right-5" style={{ bottom: insets.bottom + 16 }}>
-        <Boton
-          texto="Nuevo sueño"
-          onPress={() => router.push('/sueno/nuevo')}
-          icono={<Plus size={20} color={colores.tinta} />}
-        />
-      </View>
+      {/* Botón flotante para registrar nuevo sueño */}
+      {suenos.length > 0 && (
+        <BotonFlotante onPress={() => router.push('/sueno/nuevo')} />
+      )}
 
+      {/* Experiencia de bienvenida (overlay inicial de consumo único) */}
       {mostrarBienvenida && (
         <Animated.View
           entering={FadeIn.duration(300)}
@@ -180,11 +261,7 @@ export default function Inicio() {
           style={StyleSheet.absoluteFill}
         >
           <Bienvenida
-            nombreUsuario={
-              session?.user?.user_metadata?.nombre ??
-              session?.user?.user_metadata?.name ??
-              session?.user?.email?.split('@')[0]
-            }
+            nombreUsuario={nombreUsuario}
             onEntrar={despedirBienvenida}
           />
         </Animated.View>
@@ -192,3 +269,170 @@ export default function Inicio() {
     </GradientBackground>
   );
 }
+
+const s = StyleSheet.create({
+  cabecera: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 6,
+    gap: 12,
+  },
+  cabeceraInfo: {
+    flex: 1,
+  },
+  cabeceraSaludo: {
+    fontFamily: fuentes.medio,
+    fontSize: 13,
+    color: colores.celeste,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  cabeceraTitulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 32,
+    lineHeight: 38,
+    color: colores.tinta,
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  cabeceraFrase: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colores.tintaSuave,
+    marginTop: 3,
+  },
+  cabeceraBotones: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  botonAccion: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  contadorFila: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  contadorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(56, 189, 248, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.22)',
+  },
+  contadorTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 12,
+    color: colores.celeste,
+  },
+  errorTexto: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    fontFamily: fuentes.medio,
+    fontSize: 13,
+    color: colores.error,
+  },
+  listaContenido: {
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  vacioContenedor: {
+    marginTop: 48,
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  vacioAura: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    marginBottom: 20,
+  },
+  vacioLottie: {
+    width: 110,
+    height: 110,
+  },
+  vacioTitulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 24,
+    lineHeight: 32,
+    color: colores.tinta,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  vacioDescripcion: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colores.tintaSuave,
+    textAlign: 'center',
+    marginTop: 10,
+    maxWidth: 300,
+  },
+  vacioBoton: {
+    marginTop: 26,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  vacioBotonGradiente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+  },
+  vacioBotonTexto: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 15,
+    color: colores.tinta,
+  },
+  flotanteContenedor: {
+    position: 'absolute',
+    alignSelf: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+  },
+  flotantePressable: {
+    borderRadius: 999,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.32)',
+  },
+  flotanteGradiente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 13,
+  },
+  flotanteTexto: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 15,
+    color: colores.tinta,
+    letterSpacing: 0.2,
+  },
+});

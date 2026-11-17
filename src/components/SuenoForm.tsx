@@ -1,14 +1,24 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { router } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Plus, Sparkles } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
 import { GlassCard } from '@/components/GlassCard';
 import { LottieMood } from '@/components/LottieMood';
 import { MoodChip } from '@/components/MoodChip';
-import { colorDeEstado, colores } from '@/constants/theme';
+import { SelectorIntensidad } from '@/components/SelectorIntensidad';
+import { colorDeEstado, colores, fuentes } from '@/constants/theme';
 import { useSimbolos } from '@/hooks/useSimbolos';
 import { mensajeError } from '@/lib/errores';
 import type { EstadoAnimo, NuevoSueno } from '@/types';
@@ -40,12 +50,26 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
   const [elegidos, setElegidos] = useState<string[]>(simbolosIniciales);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+
+  // Animated.Value para la animación de éxito — useMemo evita recrearla en cada render
+  // y el React Compiler no la trata como un ref que se lee durante el render.
+  const exitoOpacidad = useMemo(() => new Animated.Value(0), []);
 
   const color = colorDeEstado(estado);
 
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  function mostrarExito() {
+    setGuardadoExitoso(true);
+    Animated.sequence([
+      Animated.timing(exitoOpacidad, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(600),
+      Animated.timing(exitoOpacidad, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }
 
   function alternar(id: string) {
     setElegidos((actual) => (actual.includes(id) ? actual.filter((x) => x !== id) : [...actual, id]));
@@ -59,11 +83,15 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
     setGuardando(true);
     setError(null);
     try {
+      mostrarExito();
       await onGuardar(
         { titulo: titulo.trim(), relato: relato.trim() || null, estado_animo: estado, intensidad },
         elegidos
       );
     } catch (e) {
+      setGuardadoExitoso(false);
+      exitoOpacidad.stopAnimation();
+      Animated.timing(exitoOpacidad, { toValue: 0, duration: 100, useNativeDriver: true }).start();
       setError(mensajeError(e, 'No se pudo guardar.'));
     } finally {
       setGuardando(false);
@@ -82,32 +110,45 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
         }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── Tarjeta: Título y relato ── */}
         <GlassCard relleno="p-5">
-          <View className="gap-4">
-            <Campo etiqueta="Título" value={titulo} onChangeText={setTitulo} placeholder="Ej. Volaba sobre el mar" />
+          <View style={s.seccionEncabezado}>
+            <View style={[s.accentBar, { backgroundColor: colores.celeste }]} />
+            <Text style={s.seccionTitulo}>El sueño</Text>
+          </View>
+          <View style={s.camposGap}>
+            <Campo
+              etiqueta="Título"
+              value={titulo}
+              onChangeText={setTitulo}
+              placeholder="Ej. Volaba sobre el mar"
+            />
             <Campo
               etiqueta="Relato"
               value={relato}
               onChangeText={setRelato}
               multilinea
-              placeholder="Cuéntalo con detalle mientras lo recuerdes"
+              placeholder="Cuéntalo con detalle mientras lo recuerdes…"
             />
           </View>
         </GlassCard>
 
+        {/* ── Tarjeta: Estado de ánimo e intensidad ── */}
         <GlassCard relleno="p-5">
-          <Text className="font-fuerte text-lg text-tinta">Cómo se sintió</Text>
+          <View style={s.seccionEncabezado}>
+            <View style={[s.accentBar, { backgroundColor: color }]} />
+            <Text style={s.seccionTitulo}>Cómo se sintió</Text>
+          </View>
 
-          <View className="my-4 items-center">
-            <View
-              className="h-28 w-28 items-center justify-center overflow-hidden rounded-full"
-              style={{ backgroundColor: `${color}30` }}
-            >
+          {/* Lottie central */}
+          <View style={s.lottieFila}>
+            <View style={[s.lottieCirculo, { backgroundColor: `${color}28` }]}>
               <LottieMood estado={estado} tamano={96} />
             </View>
           </View>
 
-          <View className="flex-row flex-wrap gap-2">
+          {/* Chips de estado */}
+          <View style={s.chipsEstado}>
             {ESTADOS.map((e) => (
               <MoodChip
                 key={e}
@@ -119,32 +160,37 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
             ))}
           </View>
 
-          <Text className="mb-2 mt-5 font-medio text-sm text-tinta-suave">Intensidad</Text>
-          <View className="flex-row gap-2">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <MoodChip key={n} etiqueta={String(n)} seleccionado={intensidad === n} color={color} onPress={() => setIntensidad(n)} />
-            ))}
-          </View>
+          {/* Separador sutil */}
+          <View style={s.separador} />
+
+          {/* Intensidad */}
+          <Text style={s.subseccionTitulo}>Intensidad del sueño</Text>
+          <SelectorIntensidad valor={intensidad} onChange={setIntensidad} color={color} />
         </GlassCard>
 
+        {/* ── Tarjeta: Símbolos ── */}
         <GlassCard relleno="p-5">
-          <Text className="font-fuerte text-lg text-tinta">Símbolos del sueño</Text>
+          <View style={s.seccionEncabezado}>
+            <View style={[s.accentBar, { backgroundColor: colores.lavanda }]} />
+            <Text style={s.seccionTitulo}>Símbolos del sueño</Text>
+          </View>
 
           {simbolos.length === 0 ? (
             <Pressable
               onPress={() => router.push('/simbolos/nuevo')}
-              className="mt-3 flex-row items-center gap-2 active:opacity-70"
+              style={({ pressed }) => [s.crearSimboloBoton, pressed && s.crearSimboloPresionado]}
             >
               <Plus size={18} color={colores.acento} />
-              <Text className="font-medio text-base text-tinta">Crea tu primer símbolo</Text>
+              <Text style={s.crearSimboloTexto}>Crea tu primer símbolo</Text>
             </Pressable>
           ) : (
-            <View className="mt-3 flex-row flex-wrap gap-2">
+            <View style={s.chipsSimbolos}>
               {simbolos.map((sim) => (
                 <MoodChip
                   key={sim.id}
                   etiqueta={sim.nombre}
                   seleccionado={elegidos.includes(sim.id)}
+                  color={colores.lavanda}
                   onPress={() => alternar(sim.id)}
                 />
               ))}
@@ -152,8 +198,18 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
           )}
         </GlassCard>
 
-        {error && <Text className="font-medio text-sm text-peligro">{error}</Text>}
+        {/* ── Error ── */}
+        {error && <Text style={s.textoError}>{error}</Text>}
 
+        {/* ── Confirmación de guardado ── */}
+        {guardadoExitoso && (
+          <Animated.View style={[s.exitoFila, { opacity: exitoOpacidad }]}>
+            <Sparkles size={15} color={colores.celeste} />
+            <Text style={s.exitoTexto}>Sueño guardado</Text>
+          </Animated.View>
+        )}
+
+        {/* ── Botón principal ── */}
         <Boton texto={textoBoton} onPress={enviar} cargando={guardando} />
 
         {children}
@@ -161,3 +217,94 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
     </KeyboardAvoidingView>
   );
 }
+
+const s = StyleSheet.create({
+  seccionEncabezado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 18,
+  },
+  accentBar: {
+    width: 3,
+    height: 18,
+    borderRadius: 2,
+  },
+  seccionTitulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 18,
+    color: colores.tinta,
+    letterSpacing: 0.1,
+  },
+  camposGap: {
+    gap: 16,
+  },
+  lottieFila: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  lottieCirculo: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  chipsEstado: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  separador: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: 16,
+  },
+  subseccionTitulo: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.tintaSuave,
+    letterSpacing: 0.2,
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  chipsSimbolos: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  crearSimboloBoton: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  crearSimboloPresionado: {
+    opacity: 0.6,
+  },
+  crearSimboloTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 15,
+    color: colores.tinta,
+  },
+  textoError: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.error,
+    textAlign: 'center',
+  },
+  exitoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  exitoTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.celeste,
+    letterSpacing: 0.3,
+  },
+});
