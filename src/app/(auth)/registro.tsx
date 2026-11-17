@@ -23,25 +23,30 @@ import { mensajeError } from '@/lib/errores';
 
 export default function Registro() {
   const insets = useSafeAreaInsets();
-  const { registrar, verificarCodigo, reenviarCodigo } = useAuth();
-  const [paso, setPaso] = useState<'datos' | 'codigo'>('datos');
+  const { registrar, reenviarCodigo } = useAuth();
+  const [paso, setPaso] = useState<'datos' | 'confirmacion'>('datos');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [codigo, setCodigo] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
+  const [mensajeReenvio, setMensajeReenvio] = useState<string | null>(null);
 
   async function crearCuenta() {
     if (!email.trim() || password.length < 6) {
-      Alert.alert('Revisa los datos', 'Escribe un correo y una contraseña de al menos 6 caracteres.');
+      Alert.alert(
+        'Revisa los datos',
+        'Escribe un correo y una contraseña de al menos 6 caracteres.'
+      );
       return;
     }
     setEnviando(true);
+    setMensajeReenvio(null);
     try {
       const { session } = await registrar(email.trim(), password);
       if (session) {
         await AsyncStorage.setItem('@diario_suenos:mostrar_bienvenida', 'true');
       } else {
-        setPaso('codigo');
+        setPaso('confirmacion');
       }
     } catch (e) {
       Alert.alert('No se pudo crear la cuenta', mensajeError(e));
@@ -50,33 +55,21 @@ export default function Registro() {
     }
   }
 
-  async function confirmar() {
-    if (codigo.trim().length < 6) {
-      Alert.alert('Código incompleto', 'Escribe el código que llegó a tu correo.');
-      return;
-    }
-    setEnviando(true);
-    try {
-      await AsyncStorage.setItem('@diario_suenos:mostrar_bienvenida', 'true');
-      await verificarCodigo(email.trim(), codigo.trim());
-    } catch (e) {
-      await AsyncStorage.removeItem('@diario_suenos:mostrar_bienvenida');
-      Alert.alert('Código incorrecto o vencido', mensajeError(e));
-    } finally {
-      setEnviando(false);
-    }
-  }
-
   async function reenviar() {
+    if (reenviando) return;
+    setReenviando(true);
+    setMensajeReenvio(null);
     try {
       await reenviarCodigo(email.trim());
-      Alert.alert('Código enviado', 'Te enviamos un código nuevo.');
+      setMensajeReenvio('Te enviamos un nuevo enlace a tu correo.');
     } catch (e) {
-      Alert.alert('No se pudo reenviar', mensajeError(e));
+      Alert.alert('No se pudo reenviar el correo', mensajeError(e));
+    } finally {
+      setReenviando(false);
     }
   }
 
-  const enCodigo = paso === 'codigo';
+  const enConfirmacion = paso === 'confirmacion';
 
   return (
     <GradientBackground areaSegura>
@@ -100,37 +93,44 @@ export default function Registro() {
 
           {/* 2. Título principal en Fraunces */}
           <Text style={s.tituloApp}>
-            {enCodigo ? 'Revisa tu correo' : 'Crea tu cuenta'}
+            {enConfirmacion ? 'Revisa tu correo' : 'Crea tu cuenta'}
           </Text>
 
-          {/* 3. Subtítulo cálido en Manrope */}
+          {/* 3. Subtítulo en Manrope */}
           <Text style={s.subtituloApp}>
-            {enCodigo
-              ? `Enviamos un código a ${email.trim()}. Escríbelo para activar tu cuenta.`
+            {enConfirmacion
+              ? 'Te enviamos un enlace para confirmar tu cuenta. Ábrelo desde este dispositivo para comenzar a guardar tus sueños.'
               : 'Un espacio para guardar cada sueño que quieras recordar.'}
           </Text>
 
-          {/* 4. Tarjeta Liquid Glass con campos */}
+          {/* 4. Tarjeta Liquid Glass */}
           <GlassCard className="mt-7" relleno="p-5">
-            {enCodigo ? (
+            {enConfirmacion ? (
               <View style={s.formularioGap}>
-                <Campo
-                  etiqueta="Código de verificación"
-                  value={codigo}
-                  onChangeText={setCodigo}
-                  keyboardType="number-pad"
-                  maxLength={10}
-                  placeholder="123456"
-                />
+                {/* Indicación clara del correo receptor */}
+                <View style={s.correoCaja}>
+                  <Text style={s.etiquetaCorreo}>Correo de destino</Text>
+                  <Text
+                    style={s.textoCorreo}
+                    numberOfLines={1}
+                    ellipsizeMode="middle"
+                  >
+                    {email.trim()}
+                  </Text>
+                </View>
+
+                {/* Notificación visual de reenvío exitoso */}
+                {mensajeReenvio ? (
+                  <View style={s.mensajeExitoContenedor}>
+                    <Text style={s.textoExito}>{mensajeReenvio}</Text>
+                  </View>
+                ) : null}
+
+                {/* Botón para solicitar nuevo enlace */}
                 <Boton
-                  texto="Confirmar cuenta"
-                  onPress={confirmar}
-                  cargando={enviando}
-                  className="mt-1"
-                />
-                <Boton
-                  texto="Reenviar código"
+                  texto="Reenviar correo"
                   onPress={reenviar}
+                  cargando={reenviando}
                   variante="vidrio"
                 />
               </View>
@@ -161,12 +161,19 @@ export default function Registro() {
             )}
           </GlassCard>
 
-          {/* 5. Enlace refinado hacia Login o cambio de correo */}
+          {/* 5. Enlace hacia Login o corrección de correo */}
           <Pressable
-            onPress={() => (enCodigo ? setPaso('datos') : router.push('/login'))}
+            onPress={() => {
+              if (enConfirmacion) {
+                setMensajeReenvio(null);
+                setPaso('datos');
+              } else {
+                router.push('/login');
+              }
+            }}
             accessibilityRole="button"
             accessibilityLabel={
-              enCodigo
+              enConfirmacion
                 ? '¿Correo incorrecto? Cambiar correo'
                 : '¿Ya tienes un diario? Inicia sesión'
             }
@@ -176,7 +183,7 @@ export default function Registro() {
               pressed && s.enlacePresionado,
             ]}
           >
-            {enCodigo ? (
+            {enConfirmacion ? (
               <Text style={s.textoEnlaceContenedor}>
                 <Text style={s.textoEnlacePregunta}>¿Correo incorrecto? </Text>
                 <Text style={s.textoEnlaceAccion}>Cambiar correo</Text>
@@ -221,6 +228,41 @@ const s = StyleSheet.create({
   },
   formularioGap: {
     gap: 16,
+  },
+  correoCaja: {
+    backgroundColor: colores.campo,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colores.bordeSutil,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  etiquetaCorreo: {
+    fontFamily: fuentes.medio,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colores.tintaTenue,
+    marginBottom: 4,
+  },
+  textoCorreo: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 15,
+    color: colores.celeste,
+  },
+  mensajeExitoContenedor: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  textoExito: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.celeste,
+    textAlign: 'center',
   },
   enlaceAccion: {
     marginTop: 26,

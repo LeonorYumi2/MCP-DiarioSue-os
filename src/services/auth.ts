@@ -2,7 +2,19 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 export async function registrar(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: 'diariosuenos://confirm',
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function intercambiarCodigoPorSesion(code: string) {
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) throw error;
   return data;
 }
@@ -36,6 +48,12 @@ export async function verificarCodigo(email: string, codigo: string) {
 }
 
 export async function reenviarCodigo(email: string) {
-  const { error } = await supabase.auth.resend({ type: 'signup', email });
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: 'diariosuenos://confirm',
+    },
+  });
   if (error) throw error;
 }
