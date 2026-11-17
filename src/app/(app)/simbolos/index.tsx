@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Plus, Tags } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,7 +28,12 @@ export default function ListaSimbolos() {
         keyExtractor={(item) => item.id}
         refreshing={cargando}
         onRefresh={recargar}
-        contentContainerStyle={{ gap: 12, padding: 20, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{
+          gap: 12,
+          paddingHorizontal: 20,
+          paddingTop: insets.top + (Platform.OS === 'ios' ? 52 : 56),
+          paddingBottom: insets.bottom + 100,
+        }}
         ListEmptyComponent={
           !cargando ? (
             <View className="mt-20 items-center px-6">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { Moon } from 'lucide-react-native';
 import { Boton } from '@/components/Boton';
@@ -23,8 +24,10 @@ export default function Login() {
     }
     setEnviando(true);
     try {
+      await AsyncStorage.setItem('@diario_suenos:mostrar_bienvenida', 'true');
       await iniciarSesion(email.trim(), password);
     } catch (e) {
+      await AsyncStorage.removeItem('@diario_suenos:mostrar_bienvenida');
       Alert.alert('No se pudo iniciar sesión', mensajeError(e));
     } finally {
       setEnviando(false);

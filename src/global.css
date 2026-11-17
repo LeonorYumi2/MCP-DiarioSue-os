@@ -8,13 +8,23 @@
   --font-medio: 'Manrope_600SemiBold';
   --font-fuerte: 'Manrope_700Bold';
 
-  --color-medianoche: #0a0b2e;
-  --color-tinta: #f5f3ff;
-  --color-tinta-suave: rgba(245, 243, 255, 0.72);
-  --color-tinta-tenue: rgba(245, 243, 255, 0.45);
-  --color-vidrio: rgba(255, 255, 255, 0.09);
-  --color-campo: rgba(255, 255, 255, 0.08);
-  --color-borde: rgba(255, 255, 255, 0.24);
+  --color-medianoche: #06071b;
+  --color-tinta: #f8f7ff;
+  --color-tinta-suave: rgba(248, 247, 255, 0.74);
+  --color-tinta-tenue: rgba(248, 247, 255, 0.45);
+  --color-vidrio: rgba(255, 255, 255, 0.08);
+  --color-vidrio-brillo: rgba(255, 255, 255, 0.18);
+  --color-campo: rgba(255, 255, 255, 0.06);
+  --color-borde: rgba(255, 255, 255, 0.18);
+  --color-borde-sutil: rgba(255, 255, 255, 0.09);
+  --color-borde-luz: rgba(255, 255, 255, 0.32);
   --color-acento: #8b5cf6;
+  --color-acento-fin: #d946ef;
+  --color-celeste: #38bdf8;
+  --color-lavanda: #a78bfa;
   --color-peligro: #fda4af;
+  --color-tranquilo: #38bdf8;
+  --color-lucido: #a78bfa;
+  --color-raro: #f0abfc;
+  --color-pesadilla: #fb7185;
 }

@@ -1,8 +1,11 @@
-import { useCallback, type ReactNode } from 'react';
-import { Alert, FlatList, Pressable, Text, View } from 'react-native';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { LogOut, Moon, Plus, Tags } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Bienvenida } from '@/components/Bienvenida';
 import { Boton } from '@/components/Boton';
 import { GlassCard } from '@/components/GlassCard';
 import { GradientBackground } from '@/components/GradientBackground';
@@ -47,9 +50,29 @@ function BotonIcono({ onPress, etiqueta, children }: { onPress: () => void; etiq
 }
 
 export default function Inicio() {
-  const { cerrarSesion } = useAuth();
+  const { session, cerrarSesion } = useAuth();
   const { suenos, cargando, error, recargar } = useSuenos();
   const insets = useSafeAreaInsets();
+  const [mostrarBienvenida, setMostrarBienvenida] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('@diario_suenos:mostrar_bienvenida')
+      .then((val) => {
+        if (val === 'true') {
+          setMostrarBienvenida(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function despedirBienvenida() {
+    try {
+      await AsyncStorage.removeItem('@diario_suenos:mostrar_bienvenida');
+    } catch {
+      // ignore
+    }
+    setMostrarBienvenida(false);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -149,6 +172,23 @@ export default function Inicio() {
           icono={<Plus size={20} color={colores.tinta} />}
         />
       </View>
+
+      {mostrarBienvenida && (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(500)}
+          style={StyleSheet.absoluteFill}
+        >
+          <Bienvenida
+            nombreUsuario={
+              session?.user?.user_metadata?.nombre ??
+              session?.user?.user_metadata?.name ??
+              session?.user?.email?.split('@')[0]
+            }
+            onEntrar={despedirBienvenida}
+          />
+        </Animated.View>
+      )}
     </GradientBackground>
   );
 }

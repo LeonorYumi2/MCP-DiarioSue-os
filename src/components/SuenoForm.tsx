@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
 import { GlassCard } from '@/components/GlassCard';
@@ -29,6 +30,8 @@ type Props = {
 };
 
 export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuardar, children }: Props) {
+  const insets = useSafeAreaInsets();
+  const espacioSuperior = insets.top + (Platform.OS === 'ios' ? 52 : 56);
   const { simbolos, recargar } = useSimbolos();
   const [titulo, setTitulo] = useState(inicial?.titulo ?? '');
   const [relato, setRelato] = useState(inicial?.relato ?? '');
@@ -71,7 +74,12 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ gap: 16, padding: 20, paddingBottom: 48 }}
+        contentContainerStyle={{
+          gap: 16,
+          paddingHorizontal: 20,
+          paddingTop: espacioSuperior,
+          paddingBottom: insets.bottom + 48,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <GlassCard relleno="p-5">

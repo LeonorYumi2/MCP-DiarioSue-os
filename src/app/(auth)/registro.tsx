@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { MailCheck, UserPlus } from 'lucide-react-native';
 import { Boton } from '@/components/Boton';
@@ -26,7 +27,11 @@ export default function Registro() {
     setEnviando(true);
     try {
       const { session } = await registrar(email.trim(), password);
-      if (!session) setPaso('codigo');
+      if (session) {
+        await AsyncStorage.setItem('@diario_suenos:mostrar_bienvenida', 'true');
+      } else {
+        setPaso('codigo');
+      }
     } catch (e) {
       Alert.alert('No se pudo crear la cuenta', mensajeError(e));
     } finally {
@@ -41,8 +46,10 @@ export default function Registro() {
     }
     setEnviando(true);
     try {
+      await AsyncStorage.setItem('@diario_suenos:mostrar_bienvenida', 'true');
       await verificarCodigo(email.trim(), codigo.trim());
     } catch (e) {
+      await AsyncStorage.removeItem('@diario_suenos:mostrar_bienvenida');
       Alert.alert('Código incorrecto o vencido', mensajeError(e));
     } finally {
       setEnviando(false);

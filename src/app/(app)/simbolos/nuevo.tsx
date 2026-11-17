@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
 import { GlassCard } from '@/components/GlassCard';
@@ -10,6 +11,7 @@ import { useSimbolos } from '@/hooks/useSimbolos';
 import { mensajeError } from '@/lib/errores';
 
 export default function FormularioSimbolo() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editando = !!id;
   const { obtener, crear, actualizar, borrar } = useSimbolos();
@@ -78,9 +80,14 @@ export default function FormularioSimbolo() {
         </View>
       ) : (
         <ScrollView
-  contentContainerStyle={{ gap: 16, padding: 20, paddingBottom: 48 }}
-  keyboardShouldPersistTaps="handled"
->
+          contentContainerStyle={{
+            gap: 16,
+            paddingHorizontal: 20,
+            paddingTop: insets.top + (Platform.OS === 'ios' ? 52 : 56),
+            paddingBottom: insets.bottom + 48,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
           <GlassCard relleno="p-5">
             <View className="gap-4">
               <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder="Ej. Agua" />
