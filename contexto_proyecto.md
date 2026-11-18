@@ -53,6 +53,7 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo
@@ -128,6 +129,7 @@ Docs: https://docs.expo.dev/eas/index.md
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.diariosuenos.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -145,7 +147,7 @@ Docs: https://docs.expo.dev/eas/index.md
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#06071B",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
@@ -156,7 +158,42 @@ Docs: https://docs.expo.dev/eas/index.md
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "75777973-8c84-4d57-9c04-2bcc3c6746e0"
+      }
+    },
+    "owner": "leonoryumi"
+  }
+}
+
+
+================================================
+ðŸ“„ ARCHIVO: eas.json
+================================================
+
+{
+  "cli": {
+    "version": ">= 14.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "environment": "preview",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
   }
 }
 
@@ -326,58 +363,130 @@ Join our community of developers creating universal apps.
 ðŸ“„ ARCHIVO: src\app\(app)\index.tsx
 ================================================
 
-import { useCallback, type ReactNode } from 'react';
-import { Alert, FlatList, Pressable, Text, View } from 'react-native';
+/* eslint-disable react-hooks/immutability */
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import LottieView from 'lottie-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { LogOut, Moon, Plus, Tags } from 'lucide-react-native';
+import { BookOpen, Moon, Plus, Power, Sparkles } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Boton } from '@/components/Boton';
-import { GlassCard } from '@/components/GlassCard';
+import { Bienvenida } from '@/components/Bienvenida';
+import { Despedida } from '@/components/Despedida';
 import { GradientBackground } from '@/components/GradientBackground';
-import { DESENFOQUE_EN_LISTAS, colorDeEstado, colores } from '@/constants/theme';
+import { ModalConfirmacion } from '@/components/ModalConfirmacion';
+import { SuenoCard } from '@/components/SuenoCard';
+import { colores, fuentes } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuenos } from '@/hooks/useSuenos';
+import { mensajeError } from '@/lib/errores';
+import type { SuenoConSimbolos } from '@/types';
 
-function formatearFecha(fecha?: string | null) {
-  if (!fecha) return '';
-  return new Date(`${fecha}T00:00:00`).toLocaleDateString('es-EC', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-}
+function BotonAccion({
+  onPress,
+  etiqueta,
+  children,
+}: {
+  onPress: () => void;
+  etiqueta: string;
+  children: ReactNode;
+}) {
+  const scale = useSharedValue(1);
 
-function Intensidad({ valor, color }: { valor: number | null; color: string }) {
+  const estiloAnimado = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <View className="flex-row gap-1.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <View
-          key={n}
-          className={`h-2 w-2 rounded-full ${n <= (valor ?? 0) ? '' : 'bg-white/20'}`}
-          style={n <= (valor ?? 0) ? { backgroundColor: color } : undefined}
-        />
-      ))}
-    </View>
+    <Animated.View style={estiloAnimado}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => (scale.value = withTiming(0.92, { duration: 80 }))}
+        onPressOut={() => (scale.value = withSpring(1, { damping: 14, stiffness: 220 }))}
+        accessibilityRole="button"
+        accessibilityLabel={etiqueta}
+        style={s.botonAccion}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
   );
 }
 
-function BotonIcono({ onPress, etiqueta, children }: { onPress: () => void; etiqueta: string; children: ReactNode }) {
+function BotonFlotante({ onPress }: { onPress: () => void }) {
+  const insets = useSafeAreaInsets();
+  const scale = useSharedValue(1);
+
+  const estiloAnimado = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={etiqueta}
-      className="h-11 w-11 items-center justify-center rounded-full border border-borde bg-campo active:opacity-70"
+    <Animated.View
+      style={[
+        s.flotanteContenedor,
+        { bottom: Math.max(insets.bottom, 16) + 12 },
+        estiloAnimado,
+      ]}
     >
-      {children}
-    </Pressable>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => (scale.value = withTiming(0.94, { duration: 90 }))}
+        onPressOut={() => (scale.value = withSpring(1, { damping: 15, stiffness: 220 }))}
+        accessibilityRole="button"
+        accessibilityLabel="Registrar un nuevo sueño"
+        style={s.flotantePressable}
+      >
+        <LinearGradient
+          colors={[colores.acento, colores.acentoFin]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.flotanteGradiente}
+        >
+          <Plus size={20} color={colores.tinta} strokeWidth={2.4} />
+          <Text style={s.flotanteTexto}>Nuevo sueño</Text>
+        </LinearGradient>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 export default function Inicio() {
-  const { cerrarSesion } = useAuth();
+  const { session, cerrarSesion } = useAuth();
   const { suenos, cargando, error, recargar } = useSuenos();
   const insets = useSafeAreaInsets();
+  const [mostrarBienvenida, setMostrarBienvenida] = useState(false);
+  const [modalSalirVisible, setModalSalirVisible] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
+  const [mostrarDespedida, setMostrarDespedida] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('@diario_suenos:mostrar_bienvenida')
+      .then((val) => {
+        if (val === 'true') {
+          setMostrarBienvenida(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function despedirBienvenida() {
+    try {
+      await AsyncStorage.removeItem('@diario_suenos:mostrar_bienvenida');
+    } catch {
+      // ignore
+    }
+    setMostrarBienvenida(false);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -385,108 +494,348 @@ export default function Inicio() {
     }, [recargar])
   );
 
+  async function ejecutarCierreSesion() {
+    setModalSalirVisible(false);
+    setMostrarDespedida(true);
+    setSaliendo(true);
+    try {
+      // Permitir que la animación de despedida se disfrute por ~1.8 segundos
+      await new Promise((resolve) => setTimeout(resolve, 1800));
+      await cerrarSesion();
+    } catch (e) {
+      setMostrarDespedida(false);
+      setSaliendo(false);
+      Alert.alert('No se pudo cerrar sesión', mensajeError(e));
+    }
+  }
+
+  // Extracción de nombre de usuario para el saludo discreto
+  const nombreUsuario =
+    session?.user?.user_metadata?.nombre ??
+    session?.user?.user_metadata?.name ??
+    session?.user?.email?.split('@')[0];
+  const nombreLimpio = nombreUsuario
+    ? nombreUsuario.trim().split(' ')[0]
+    : null;
+  const saludo = nombreLimpio
+    ? `Hola, ${nombreLimpio.charAt(0).toUpperCase() + nombreLimpio.slice(1)}`
+    : 'Buenas noches';
+
   return (
     <GradientBackground areaSegura>
-      <View className="flex-row items-center gap-2 px-5 pt-3">
-        <View className="flex-1">
-          <Text className="font-titulo text-4xl tracking-tight text-tinta">Tus sueños</Text>
-          <Text className="mt-0.5 font-cuerpo text-sm text-tinta-suave">
-            {suenos.length === 1 ? '1 sueño anotado' : `${suenos.length} sueños anotados`}
+      {/* Encabezado elegante del diario */}
+      <View style={[s.cabecera, { paddingTop: insets.top > 0 ? 8 : 16 }]}>
+        <View style={s.cabeceraInfo}>
+          <Text style={s.cabeceraSaludo}>{saludo}</Text>
+          <Text style={s.cabeceraTitulo}>Diario de sueños</Text>
+          <Text style={s.cabeceraFrase}>
+            Cada sueño es una ventana a tu mundo interior.
           </Text>
         </View>
-        <BotonIcono etiqueta="Símbolos" onPress={() => router.push('/simbolos')}>
-          <Tags size={20} color={colores.tinta} />
-        </BotonIcono>
-        <BotonIcono etiqueta="Cerrar sesión" onPress={() =>
-            Alert.alert(
-              'Cerrar sesión',
-              '¿Seguro que quieres salir? Tus sueños seguirán guardados.',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                { text: 'Salir', style: 'destructive', onPress: () => cerrarSesion() },
-              ]
-            )
-          }>
-          <LogOut size={20} color={colores.tinta} />
-        </BotonIcono>
+
+        {/* Botones de acción superior */}
+        <View style={s.cabeceraBotones}>
+          <BotonAccion etiqueta="Glosario de símbolos" onPress={() => router.push('/simbolos')}>
+            <BookOpen size={21} color={colores.tinta} strokeWidth={2.2} />
+          </BotonAccion>
+
+          <BotonAccion etiqueta="Cerrar sesión" onPress={() => setModalSalirVisible(true)}>
+            <Power size={21} color={colores.tinta} strokeWidth={2.2} />
+          </BotonAccion>
+        </View>
       </View>
 
-      {error && <Text className="mt-2 px-5 font-medio text-sm text-peligro">{error}</Text>}
+      {/* Contador de sueños sutil */}
+      {!cargando && suenos.length > 0 && (
+        <View style={s.contadorFila}>
+          <View style={s.contadorBadge}>
+            <Sparkles size={13} color={colores.celeste} />
+            <Text style={s.contadorTexto}>
+              {suenos.length === 1 ? '1 sueño registrado' : `${suenos.length} sueños registrados`}
+            </Text>
+          </View>
+        </View>
+      )}
 
-      <FlatList
+      {/* Mensaje de error si la carga falla */}
+      {error && <Text style={s.errorTexto}>{error}</Text>}
+
+      {/* Listado de tarjetas de sueños */}
+      <FlatList<SuenoConSimbolos>
         data={suenos}
         keyExtractor={(item) => item.id}
         refreshing={cargando}
         onRefresh={recargar}
-        contentContainerStyle={{ gap: 14, padding: 20, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={[
+          s.listaContenido,
+          { paddingBottom: insets.bottom + 110 },
+        ]}
         ListEmptyComponent={
-          !cargando ? (
-            <View className="mt-20 items-center px-6">
-              <View className="mb-4 h-16 w-16 items-center justify-center rounded-full border border-borde bg-campo">
-                <Moon size={28} color={colores.tintaSuave} />
+          !cargando && !error ? (
+            <View style={s.vacioContenedor}>
+              <View style={s.vacioAura}>
+                <LottieView
+                  source={require('../../../assets/animations/tranquilo.json')}
+                  autoPlay
+                  loop
+                  style={s.vacioLottie}
+                />
               </View>
-              <Text className="text-center font-cuerpo text-base leading-6 text-tinta-suave">
-                Aún no hay sueños. Anota el primero antes de que se te olvide.
+
+              <Text style={s.vacioTitulo}>
+                «Aquí comenzará tu universo de sueños»
               </Text>
+
+              <Text style={s.vacioDescripcion}>
+                Anota lo que viviste antes de que se desvanezca en la vigilia. Cada detalle guarda un mensaje para ti.
+              </Text>
+
+              <Pressable
+                onPress={() => router.push('/sueno/nuevo')}
+                accessibilityRole="button"
+                accessibilityLabel="Registrar mi primer sueño"
+                style={s.vacioBoton}
+              >
+                <LinearGradient
+                  colors={[colores.acento, colores.acentoFin]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.vacioBotonGradiente}
+                >
+                  <Plus size={18} color={colores.tinta} strokeWidth={2.4} />
+                  <Text style={s.vacioBotonTexto}>Registrar mi primer sueño</Text>
+                </LinearGradient>
+              </Pressable>
             </View>
           ) : null
         }
-        renderItem={({ item }) => {
-          const color = colorDeEstado(item.estado_animo);
-          return (
-            <Pressable
-              onPress={() => router.push({ pathname: '/sueno/[id]', params: { id: item.id } })}
-              className="active:opacity-80"
-            >
-              <GlassCard desenfoque={DESENFOQUE_EN_LISTAS} acento={color} relleno="py-4 pl-5 pr-4">
-                <View className="flex-row items-baseline gap-2.5">
-                  <Text className="flex-1 font-fuerte text-lg text-tinta" numberOfLines={1}>
-                    {item.titulo}
-                  </Text>
-                  <Text className="font-medio text-xs text-tinta-tenue">{formatearFecha(item.fecha)}</Text>
-                </View>
-
-                {item.relato ? (
-                  <Text className="mt-1.5 font-cuerpo text-sm leading-5 text-tinta-suave" numberOfLines={2}>
-                    {item.relato}
-                  </Text>
-                ) : null}
-
-                <View className="mt-3 flex-row items-center justify-between">
-                  <Text className="font-fuerte text-sm" style={{ color }}>
-                    {item.estado_animo ?? 'sin estado'}
-                  </Text>
-                  <Intensidad valor={item.intensidad} color={color} />
-                </View>
-
-                {item.simbolos.length > 0 && (
-                  <Text className="mt-2.5 font-medio text-sm text-tinta-suave" numberOfLines={1}>
-                    {item.simbolos.map((n) => `#${n}`).join('   ')}
-                  </Text>
-                )}
-              </GlassCard>
-            </Pressable>
-          );
-        }}
+        renderItem={({ item, index }) => (
+          <SuenoCard
+            sueno={item}
+            index={index}
+            onPress={() =>
+              router.push({
+                pathname: '/sueno/[id]',
+                params: { id: item.id },
+              })
+            }
+          />
+        )}
       />
 
-      <View className="absolute left-5 right-5" style={{ bottom: insets.bottom + 16 }}>
-        <Boton
-          texto="Nuevo sueño"
-          onPress={() => router.push('/sueno/nuevo')}
-          icono={<Plus size={20} color={colores.tinta} />}
-        />
-      </View>
+      {/* Botón flotante para registrar nuevo sueño */}
+      {suenos.length > 0 && (
+        <BotonFlotante onPress={() => router.push('/sueno/nuevo')} />
+      )}
+
+      {/* Experiencia de bienvenida (overlay inicial de consumo único) */}
+      {mostrarBienvenida && (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(500)}
+          style={StyleSheet.absoluteFill}
+        >
+          <Bienvenida
+            nombreUsuario={nombreUsuario}
+            onEntrar={despedirBienvenida}
+          />
+        </Animated.View>
+      )}
+
+      {/* Modal de confirmación para cerrar sesión */}
+      <ModalConfirmacion
+        visible={modalSalirVisible}
+        titulo="¿Es hora de descansar?"
+        descripcion="Tus sueños están guardados. Puedes regresar cuando quieras."
+        textoCancelar="Seguir soñando"
+        textoConfirmar="Cerrar sesión"
+        onCancelar={() => setModalSalirVisible(false)}
+        onConfirmar={ejecutarCierreSesion}
+        cargando={saliendo}
+        variante="primario"
+        icono={<Moon size={24} color={colores.celeste} />}
+      />
+
+      {/* Experiencia de despedida animada */}
+      {mostrarDespedida && <Despedida />}
     </GradientBackground>
   );
 }
+
+const s = StyleSheet.create({
+  cabecera: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 6,
+    gap: 12,
+  },
+  cabeceraInfo: {
+    flex: 1,
+  },
+  cabeceraSaludo: {
+    fontFamily: fuentes.medio,
+    fontSize: 13,
+    color: colores.celeste,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  cabeceraTitulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 32,
+    lineHeight: 38,
+    color: colores.tinta,
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  cabeceraFrase: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colores.tintaSuave,
+    marginTop: 3,
+  },
+  cabeceraBotones: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+  },
+  botonAccion: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.28)',
+    backgroundColor: 'rgba(22, 16, 48, 0.72)',
+  },
+  contadorFila: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  contadorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(56, 189, 248, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.22)',
+  },
+  contadorTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 12,
+    color: colores.celeste,
+  },
+  errorTexto: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    fontFamily: fuentes.medio,
+    fontSize: 13,
+    color: colores.error,
+  },
+  listaContenido: {
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  vacioContenedor: {
+    marginTop: 48,
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  vacioAura: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    marginBottom: 20,
+  },
+  vacioLottie: {
+    width: 110,
+    height: 110,
+  },
+  vacioTitulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 24,
+    lineHeight: 32,
+    color: colores.tinta,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  vacioDescripcion: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colores.tintaSuave,
+    textAlign: 'center',
+    marginTop: 10,
+    maxWidth: 300,
+  },
+  vacioBoton: {
+    marginTop: 26,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  vacioBotonGradiente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+  },
+  vacioBotonTexto: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 15,
+    color: colores.tinta,
+  },
+  flotanteContenedor: {
+    position: 'absolute',
+    alignSelf: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+  },
+  flotantePressable: {
+    borderRadius: 999,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.32)',
+  },
+  flotanteGradiente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 13,
+  },
+  flotanteTexto: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 15,
+    color: colores.tinta,
+    letterSpacing: 0.2,
+  },
+});
+
 
 ================================================
 ðŸ“„ ARCHIVO: src\app\(app)\simbolos\index.tsx
 ================================================
 
 import { useCallback } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Plus, Tags } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -515,7 +864,12 @@ export default function ListaSimbolos() {
         keyExtractor={(item) => item.id}
         refreshing={cargando}
         onRefresh={recargar}
-        contentContainerStyle={{ gap: 12, padding: 20, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{
+          gap: 12,
+          paddingHorizontal: 20,
+          paddingTop: insets.top + (Platform.OS === 'ios' ? 52 : 56),
+          paddingBottom: insets.bottom + 100,
+        }}
         ListEmptyComponent={
           !cargando ? (
             <View className="mt-20 items-center px-6">
@@ -561,17 +915,21 @@ export default function ListaSimbolos() {
 ================================================
 
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Trash2 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
 import { GlassCard } from '@/components/GlassCard';
 import { GradientBackground } from '@/components/GradientBackground';
+import { ModalConfirmacion } from '@/components/ModalConfirmacion';
 import { colores } from '@/constants/theme';
 import { useSimbolos } from '@/hooks/useSimbolos';
 import { mensajeError } from '@/lib/errores';
 
 export default function FormularioSimbolo() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const editando = !!id;
   const { obtener, crear, actualizar, borrar } = useSimbolos();
@@ -581,6 +939,8 @@ export default function FormularioSimbolo() {
   const [listo, setListo] = useState(!id);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -612,22 +972,16 @@ export default function FormularioSimbolo() {
     }
   }
 
-  function confirmarBorrado() {
-    Alert.alert('Eliminar símbolo', 'Se quitará también de los sueños que lo usan.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await borrar(id!);
-            router.back();
-          } catch (e) {
-            Alert.alert('No se pudo eliminar', mensajeError(e));
-          }
-        },
-      },
-    ]);
+  async function ejecutarBorrado() {
+    setEliminando(true);
+    try {
+      await borrar(id!);
+      setModalEliminarVisible(false);
+      router.back();
+    } catch (e) {
+      setEliminando(false);
+      Alert.alert('No se pudo eliminar', mensajeError(e));
+    }
   }
 
   return (
@@ -640,9 +994,14 @@ export default function FormularioSimbolo() {
         </View>
       ) : (
         <ScrollView
-  contentContainerStyle={{ gap: 16, padding: 20, paddingBottom: 48 }}
-  keyboardShouldPersistTaps="handled"
->
+          contentContainerStyle={{
+            gap: 16,
+            paddingHorizontal: 20,
+            paddingTop: insets.top + (Platform.OS === 'ios' ? 52 : 56),
+            paddingBottom: insets.bottom + 48,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
           <GlassCard relleno="p-5">
             <View className="gap-4">
               <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder="Ej. Agua" />
@@ -660,8 +1019,31 @@ export default function FormularioSimbolo() {
 
           <Boton texto={editando ? 'Guardar cambios' : 'Guardar símbolo'} onPress={guardar} cargando={guardando} />
 
-          {editando && <Boton texto="Eliminar símbolo" onPress={confirmarBorrado} variante="peligro" />}
+          {editando && (
+            <Boton
+              texto="Eliminar símbolo"
+              onPress={() => setModalEliminarVisible(true)}
+              variante="peligro"
+            />
+          )}
         </ScrollView>
+      )}
+
+      {editando && (
+        <ModalConfirmacion
+          visible={modalEliminarVisible}
+          titulo="¿Eliminar este símbolo?"
+          descripcion="Se quitará también de los sueños que lo utilizan."
+          textoCancelar="Conservar símbolo"
+          textoConfirmar="Eliminar símbolo"
+          onCancelar={() => {
+            if (!eliminando) setModalEliminarVisible(false);
+          }}
+          onConfirmar={ejecutarBorrado}
+          cargando={eliminando}
+          variante="peligro"
+          icono={<Trash2 size={24} color={colores.error} />}
+        />
       )}
     </GradientBackground>
   );
@@ -671,7 +1053,6 @@ export default function FormularioSimbolo() {
 ðŸ“„ ARCHIVO: src\app\(app)\sueno\nuevo.tsx
 ================================================
 
-import { router } from 'expo-router';
 import { GradientBackground } from '@/components/GradientBackground';
 import { SuenoForm } from '@/components/SuenoForm';
 import { useSuenos } from '@/hooks/useSuenos';
@@ -686,7 +1067,6 @@ export default function NuevoSueno() {
         onGuardar={async (datos, simboloIds) => {
           const nuevo = await crear(datos);
           await guardarSimbolos(nuevo.id, simboloIds);
-          router.back();
         }}
       />
     </GradientBackground>
@@ -700,8 +1080,10 @@ export default function NuevoSueno() {
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Trash2 } from 'lucide-react-native';
 import { Boton } from '@/components/Boton';
 import { GradientBackground } from '@/components/GradientBackground';
+import { ModalConfirmacion } from '@/components/ModalConfirmacion';
 import { SuenoForm } from '@/components/SuenoForm';
 import { colores } from '@/constants/theme';
 import { useSuenos } from '@/hooks/useSuenos';
@@ -714,6 +1096,8 @@ export default function EditarSueno() {
   const [sueno, setSueno] = useState<Sueno | null>(null);
   const [seleccion, setSeleccion] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     Promise.all([obtener(id), listarSimbolosDeSueno(id)])
@@ -724,22 +1108,16 @@ export default function EditarSueno() {
       .catch((e) => setError(mensajeError(e, 'No se pudo cargar el sueño.')));
   }, [id, obtener, listarSimbolosDeSueno]);
 
-  function confirmarBorrado() {
-    Alert.alert('Eliminar sueño', 'Esta acción no se puede deshacer.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await borrar(id);
-            router.back();
-          } catch (e) {
-            Alert.alert('No se pudo eliminar', mensajeError(e));
-          }
-        },
-      },
-    ]);
+  async function ejecutarBorrado() {
+    setEliminando(true);
+    try {
+      await borrar(id);
+      setModalEliminarVisible(false);
+      router.back();
+    } catch (e) {
+      setEliminando(false);
+      Alert.alert('No se pudo eliminar', mensajeError(e));
+    }
   }
 
   if (error || !sueno || !seleccion) {
@@ -765,11 +1143,29 @@ export default function EditarSueno() {
         onGuardar={async (datos, simboloIds) => {
           await actualizar(id, datos);
           await guardarSimbolos(id, simboloIds);
-          router.back();
         }}
       >
-        <Boton texto="Eliminar sueño" onPress={confirmarBorrado} variante="peligro" />
+        <Boton
+          texto="Eliminar sueño"
+          onPress={() => setModalEliminarVisible(true)}
+          variante="peligro"
+        />
       </SuenoForm>
+
+      <ModalConfirmacion
+        visible={modalEliminarVisible}
+        titulo="¿Eliminar este sueño?"
+        descripcion="Esta acción no se puede deshacer."
+        textoCancelar="Conservar sueño"
+        textoConfirmar="Eliminar sueño"
+        onCancelar={() => {
+          if (!eliminando) setModalEliminarVisible(false);
+        }}
+        onConfirmar={ejecutarBorrado}
+        cargando={eliminando}
+        variante="peligro"
+        icono={<Trash2 size={24} color={colores.error} />}
+      />
     </GradientBackground>
   );
 }
@@ -778,17 +1174,44 @@ export default function EditarSueno() {
 ðŸ“„ ARCHIVO: src\app\(app)\_layout.tsx
 ================================================
 
+import { StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
+import { GlassView } from 'expo-glass-effect';
 import { colores, fuentes } from '@/constants/theme';
 
 export default function AppLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colores.fondo[0] },
+        headerTransparent: true,
         headerTintColor: colores.tinta,
         headerTitleStyle: { fontFamily: fuentes.titulo, fontSize: 20 },
         headerShadowVisible: false,
+        headerBackTitle: 'Atrás',
+        headerBackground: () => (
+          <View style={StyleSheet.absoluteFill}>
+            <GlassView
+              glassEffectStyle="clear"
+              tintColor="rgba(6, 7, 27, 0.85)"
+              style={StyleSheet.absoluteFill}
+            />
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(6, 7, 27, 0.94)' }]}
+            />
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: StyleSheet.hairlineWidth,
+                backgroundColor: 'rgba(255, 255, 255, 0.14)',
+              }}
+            />
+          </View>
+        ),
         contentStyle: { backgroundColor: colores.fondo[0] },
       }}
     >
@@ -802,22 +1225,223 @@ export default function AppLayout() {
 }
 
 ================================================
+ðŸ“„ ARCHIVO: src\app\(auth)\confirm.tsx
+================================================
+
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Boton } from '@/components/Boton';
+import { EmblemaCelestial } from '@/components/EmblemaCelestial';
+import { GlassCard } from '@/components/GlassCard';
+import { GradientBackground } from '@/components/GradientBackground';
+import { colores, fuentes } from '@/constants/theme';
+import { mensajeError } from '@/lib/errores';
+import { intercambiarCodigoPorSesion } from '@/services/auth';
+
+export default function ConfirmacionCorreo() {
+  const { code, error, error_description } = useLocalSearchParams<{
+    code?: string;
+    error?: string;
+    error_description?: string;
+  }>();
+
+  // Detección directa de errores presentes en los parámetros de la URL sin provocar renders en cascada
+  const errorParametros = error || error_description
+    ? (error_description || error || 'El enlace de confirmación no es válido o ha caducado.')
+    : !code
+    ? 'No se encontró un código de confirmación válido en el enlace.'
+    : null;
+
+  const [errorAsincrono, setErrorAsincrono] = useState<string | null>(null);
+  const codigoEnCursoRef = useRef<string | null>(null);
+  const montadoRef = useRef(true);
+
+  useEffect(() => {
+    montadoRef.current = true;
+    return () => {
+      montadoRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Si ya existe un error en los parámetros o no hay código, no se procesa
+    if (errorParametros || !code) {
+      codigoEnCursoRef.current = null;
+      return;
+    }
+
+    // Evitar procesar simultáneamente o duplicar el canje del mismo código
+    if (codigoEnCursoRef.current === code) {
+      return;
+    }
+
+    codigoEnCursoRef.current = code;
+
+    // Limpiar errores previos para mostrar inmediatamente el estado de carga
+    setErrorAsincrono(null);
+
+    const codigoActual = code;
+
+    async function procesar() {
+      try {
+        // Guardar el indicador de bienvenida antes de que la sesión se establezca
+        await AsyncStorage.setItem('@diario_suenos:mostrar_bienvenida', 'true');
+
+        // Canjear el código de autorización PKCE por la sesión autenticada
+        await intercambiarCodigoPorSesion(codigoActual);
+
+        // Al resolverse el intercambio, Supabase emite SIGNED_IN y el AuthProvider
+        // actualiza session. Stack.Protected en _layout.tsx conmuta automáticamente a (app).
+      } catch (err) {
+        await AsyncStorage.removeItem('@diario_suenos:mostrar_bienvenida');
+
+        // Solo actualizar estado si el componente sigue montado y no se ha cambiado de código
+        if (montadoRef.current && codigoEnCursoRef.current === codigoActual) {
+          setErrorAsincrono(
+            mensajeError(
+              err,
+              'No se pudo confirmar tu cuenta. Es posible que el enlace haya expirado o ya haya sido utilizado.'
+            )
+          );
+          codigoEnCursoRef.current = null;
+        }
+      }
+    }
+
+    void procesar();
+  }, [code, errorParametros]);
+
+  const mensajeErrorVisible = errorParametros || errorAsincrono;
+  const enProceso = !mensajeErrorVisible;
+
+  return (
+    <GradientBackground areaSegura>
+      <View style={s.contenedor}>
+        {/* Emblema celestial identitario */}
+        <EmblemaCelestial tamano={70} style={s.emblema} />
+
+        {enProceso ? (
+          <>
+            <Text style={s.titulo}>Confirmando tu cuenta</Text>
+            <Text style={s.subtitulo}>
+              Estamos preparando tu espacio para guardar lo que sueñas…
+            </Text>
+
+            <GlassCard relleno="p-6" className="mt-8 w-full">
+              <View style={s.tarjetaCentro}>
+                <ActivityIndicator size="large" color={colores.celeste} />
+                <Text style={s.textoEspera}>Solo tomará un instante</Text>
+              </View>
+            </GlassCard>
+          </>
+        ) : (
+          <>
+            <Text style={s.titulo}>Enlace no disponible</Text>
+            <Text style={s.subtitulo}>
+              No pudimos activar tu cuenta con este enlace de confirmación.
+            </Text>
+
+            <GlassCard relleno="p-6" className="mt-8 w-full">
+              <View style={s.tarjetaCentro}>
+                <Text style={s.textoError}>{mensajeErrorVisible}</Text>
+
+                <Boton
+                  texto="Ir al inicio de sesión"
+                  onPress={() => router.replace('/login')}
+                  className="mt-6 w-full"
+                />
+              </View>
+            </GlassCard>
+          </>
+        )}
+      </View>
+    </GradientBackground>
+  );
+}
+
+const s = StyleSheet.create({
+  contenedor: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  emblema: {
+    marginBottom: 20,
+    alignSelf: 'flex-start',
+  },
+  titulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.4,
+    color: colores.tinta,
+  },
+  subtitulo: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colores.tintaSuave,
+    marginTop: 8,
+    maxWidth: 320,
+  },
+  tarjetaCentro: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  textoEspera: {
+    fontFamily: fuentes.medio,
+    fontSize: 14,
+    color: colores.tintaSuave,
+    marginTop: 18,
+    letterSpacing: 0.2,
+  },
+  textoError: {
+    fontFamily: fuentes.medio,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colores.error,
+    textAlign: 'center',
+  },
+});
+
+
+================================================
 ðŸ“„ ARCHIVO: src\app\(auth)\login.tsx
 ================================================
 
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { Moon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
+import { EmblemaCelestial } from '@/components/EmblemaCelestial';
 import { GlassCard } from '@/components/GlassCard';
 import { GradientBackground } from '@/components/GradientBackground';
-import { colores } from '@/constants/theme';
+import { colores, fuentes } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { mensajeError } from '@/lib/errores';
 
 export default function Login() {
+  const insets = useSafeAreaInsets();
   const { iniciarSesion } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -830,8 +1454,10 @@ export default function Login() {
     }
     setEnviando(true);
     try {
+      await AsyncStorage.setItem('@diario_suenos:mostrar_bienvenida', 'true');
       await iniciarSesion(email.trim(), password);
     } catch (e) {
+      await AsyncStorage.removeItem('@diario_suenos:mostrar_bienvenida');
       Alert.alert('No se pudo iniciar sesión', mensajeError(e));
     } finally {
       setEnviando(false);
@@ -840,25 +1466,37 @@ export default function Login() {
 
   return (
     <GradientBackground areaSegura>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
+          contentContainerStyle={[
+            s.scrollContenido,
+            {
+              paddingTop: Math.max(insets.top + 8, 28),
+              paddingBottom: Math.max(insets.bottom + 16, 32),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-5 h-14 w-14 items-center justify-center rounded-2xl border border-borde bg-campo">
-            <Moon size={26} color={colores.tinta} />
-          </View>
+          {/* 1. Emblema celestial proporcionado */}
+          <EmblemaCelestial />
 
-          <Text className="font-titulo text-5xl leading-13 tracking-tight text-tinta">
+          {/* 2. Título principal en Fraunces */}
+          <Text style={s.tituloApp}>
             Diario{'\n'}de sueños
           </Text>
-          <Text className="mt-3 font-cuerpo text-base leading-6 text-tinta-suave">
+
+          {/* 3. Frase cálida en Manrope */}
+          <Text style={s.subtituloApp}>
             Anota lo que soñaste antes de que se te olvide.
           </Text>
 
-          <GlassCard className="mt-8" relleno="p-5">
-            <View className="gap-4">
+          {/* 4. Tarjeta Liquid Glass del formulario */}
+          <GlassCard className="mt-7" relleno="p-5">
+            <View style={s.formularioGap}>
               <Campo
                 etiqueta="Correo"
                 value={email}
@@ -878,8 +1516,21 @@ export default function Login() {
             </View>
           </GlassCard>
 
-          <Pressable onPress={() => router.push('/registro')} className="mt-6 items-center py-2 active:opacity-70">
-            <Text className="font-medio text-base text-tinta">¿Primera vez? Crea tu cuenta</Text>
+          {/* 5. Enlace refinado para crear diario */}
+          <Pressable
+            onPress={() => router.push('/registro')}
+            accessibilityRole="button"
+            accessibilityLabel="¿Aún no tienes un diario? Comienza el tuyo"
+            hitSlop={8}
+            style={({ pressed }) => [
+              s.enlaceRegistro,
+              pressed && s.enlacePresionado,
+            ]}
+          >
+            <Text style={s.textoRegistroContenedor}>
+              <Text style={s.textoRegistroPregunta}>¿Aún no tienes un diario? </Text>
+              <Text style={s.textoRegistroAccion}>Comienza el tuyo</Text>
+            </Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -887,39 +1538,115 @@ export default function Login() {
   );
 }
 
+const s = StyleSheet.create({
+  scrollContenido: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  emblemaContenedor: {
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+  },
+  tituloApp: {
+    fontFamily: fuentes.titulo,
+    fontSize: 42,
+    lineHeight: 48,
+    letterSpacing: -0.5,
+    color: colores.tinta,
+  },
+  subtituloApp: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colores.tintaSuave,
+    marginTop: 8,
+    maxWidth: 320,
+  },
+  formularioGap: {
+    gap: 16,
+  },
+  enlaceRegistro: {
+    marginTop: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  enlacePresionado: {
+    opacity: 0.72,
+  },
+  textoRegistroContenedor: {
+    textAlign: 'center',
+  },
+  textoRegistroPregunta: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 14.5,
+    color: colores.tintaSuave,
+  },
+  textoRegistroAccion: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 14.5,
+    color: colores.lavanda,
+    letterSpacing: 0.2,
+  },
+});
+
+
 ================================================
 ðŸ“„ ARCHIVO: src\app\(auth)\registro.tsx
 ================================================
 
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { MailCheck, UserPlus } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
+import { EmblemaCelestial } from '@/components/EmblemaCelestial';
 import { GlassCard } from '@/components/GlassCard';
 import { GradientBackground } from '@/components/GradientBackground';
-import { colores } from '@/constants/theme';
+import { colores, fuentes } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { mensajeError } from '@/lib/errores';
 
 export default function Registro() {
-  const { registrar, verificarCodigo, reenviarCodigo } = useAuth();
-  const [paso, setPaso] = useState<'datos' | 'codigo'>('datos');
+  const insets = useSafeAreaInsets();
+  const { registrar, reenviarCodigo } = useAuth();
+  const [paso, setPaso] = useState<'datos' | 'confirmacion'>('datos');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [codigo, setCodigo] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [reenviando, setReenviando] = useState(false);
+  const [mensajeReenvio, setMensajeReenvio] = useState<string | null>(null);
 
   async function crearCuenta() {
     if (!email.trim() || password.length < 6) {
-      Alert.alert('Revisa los datos', 'Escribe un correo y una contraseña de al menos 6 caracteres.');
+      Alert.alert(
+        'Revisa los datos',
+        'Escribe un correo y una contraseña de al menos 6 caracteres.'
+      );
       return;
     }
     setEnviando(true);
+    setMensajeReenvio(null);
     try {
       const { session } = await registrar(email.trim(), password);
-      if (!session) setPaso('codigo');
+      if (session) {
+        await AsyncStorage.setItem('@diario_suenos:mostrar_bienvenida', 'true');
+      } else {
+        setPaso('confirmacion');
+      }
     } catch (e) {
       Alert.alert('No se pudo crear la cuenta', mensajeError(e));
     } finally {
@@ -927,70 +1654,87 @@ export default function Registro() {
     }
   }
 
-  async function confirmar() {
-    if (codigo.trim().length < 6) {
-      Alert.alert('Código incompleto', 'Escribe el código que llegó a tu correo.');
-      return;
-    }
-    setEnviando(true);
-    try {
-      await verificarCodigo(email.trim(), codigo.trim());
-    } catch (e) {
-      Alert.alert('Código incorrecto o vencido', mensajeError(e));
-    } finally {
-      setEnviando(false);
-    }
-  }
-
   async function reenviar() {
+    if (reenviando) return;
+    setReenviando(true);
+    setMensajeReenvio(null);
     try {
       await reenviarCodigo(email.trim());
-      Alert.alert('Código enviado', 'Te enviamos un código nuevo.');
+      setMensajeReenvio('Te enviamos un nuevo enlace a tu correo.');
     } catch (e) {
-      Alert.alert('No se pudo reenviar', mensajeError(e));
+      Alert.alert('No se pudo reenviar el correo', mensajeError(e));
+    } finally {
+      setReenviando(false);
     }
   }
 
-  const enCodigo = paso === 'codigo';
-  const Icono = enCodigo ? MailCheck : UserPlus;
+  const enConfirmacion = paso === 'confirmacion';
 
   return (
     <GradientBackground areaSegura>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
+          contentContainerStyle={[
+            s.scrollContenido,
+            {
+              paddingTop: Math.max(insets.top + 8, 28),
+              paddingBottom: Math.max(insets.bottom + 16, 32),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-5 h-14 w-14 items-center justify-center rounded-2xl border border-borde bg-campo">
-            <Icono size={26} color={colores.tinta} />
-          </View>
+          {/* 1. Emblema celestial proporcionado */}
+          <EmblemaCelestial tamano={66} style={s.emblemaContenedor} />
 
-          <Text className="font-titulo text-4xl leading-10 tracking-tight text-tinta">
-            {enCodigo ? 'Revisa tu correo' : 'Crea tu cuenta'}
-          </Text>
-          <Text className="mt-3 font-cuerpo text-base leading-6 text-tinta-suave">
-            {enCodigo
-              ? `Enviamos un código a ${email.trim()}. Escríbelo para activar tu cuenta.`
-              : 'Guarda tus sueños en un lugar privado, solo tuyo.'}
+          {/* 2. Título principal en Fraunces */}
+          <Text style={s.tituloApp}>
+            {enConfirmacion ? 'Revisa tu correo' : 'Crea tu cuenta'}
           </Text>
 
-          <GlassCard className="mt-8" relleno="p-5">
-            {enCodigo ? (
-              <View className="gap-4">
-                <Campo
-                  etiqueta="Código de verificación"
-                  value={codigo}
-                  onChangeText={setCodigo}
-                  keyboardType="number-pad"
-                  maxLength={10}
-                  placeholder="Código"
+          {/* 3. Subtítulo en Manrope */}
+          <Text style={s.subtituloApp}>
+            {enConfirmacion
+              ? 'Te enviamos un enlace para confirmar tu cuenta. Ábrelo desde este dispositivo para comenzar a guardar tus sueños.'
+              : 'Un espacio para guardar cada sueño que quieras recordar.'}
+          </Text>
+
+          {/* 4. Tarjeta Liquid Glass */}
+          <GlassCard className="mt-7" relleno="p-5">
+            {enConfirmacion ? (
+              <View style={s.formularioGap}>
+                {/* Indicación clara del correo receptor */}
+                <View style={s.correoCaja}>
+                  <Text style={s.etiquetaCorreo}>Correo de destino</Text>
+                  <Text
+                    style={s.textoCorreo}
+                    numberOfLines={1}
+                    ellipsizeMode="middle"
+                  >
+                    {email.trim()}
+                  </Text>
+                </View>
+
+                {/* Notificación visual de reenvío exitoso */}
+                {mensajeReenvio ? (
+                  <View style={s.mensajeExitoContenedor}>
+                    <Text style={s.textoExito}>{mensajeReenvio}</Text>
+                  </View>
+                ) : null}
+
+                {/* Botón para solicitar nuevo enlace */}
+                <Boton
+                  texto="Reenviar correo"
+                  onPress={reenviar}
+                  cargando={reenviando}
+                  variante="vidrio"
                 />
-                <Boton texto="Confirmar cuenta" onPress={confirmar} cargando={enviando} className="mt-1" />
-                <Boton texto="Reenviar código" onPress={reenviar} variante="vidrio" />
               </View>
             ) : (
-              <View className="gap-4">
+              <View style={s.formularioGap}>
                 <Campo
                   etiqueta="Correo"
                   value={email}
@@ -1006,24 +1750,145 @@ export default function Registro() {
                   esContrasena
                   placeholder="Mínimo 6 caracteres"
                 />
-                <Boton texto="Crear cuenta" onPress={crearCuenta} cargando={enviando} className="mt-1" />
+                <Boton
+                  texto="Crear cuenta"
+                  onPress={crearCuenta}
+                  cargando={enviando}
+                  className="mt-1"
+                />
               </View>
             )}
           </GlassCard>
 
+          {/* 5. Enlace hacia Login o corrección de correo */}
           <Pressable
-            onPress={() => (enCodigo ? setPaso('datos') : router.push('/login'))}
-            className="mt-6 items-center py-2 active:opacity-70"
+            onPress={() => {
+              if (enConfirmacion) {
+                setMensajeReenvio(null);
+                setPaso('datos');
+              } else {
+                router.push('/login');
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={
+              enConfirmacion
+                ? '¿Correo incorrecto? Cambiar correo'
+                : '¿Ya tienes un diario? Inicia sesión'
+            }
+            hitSlop={8}
+            style={({ pressed }) => [
+              s.enlaceAccion,
+              pressed && s.enlacePresionado,
+            ]}
           >
-            <Text className="font-medio text-base text-tinta">
-              {enCodigo ? 'Cambiar correo' : '¿Ya tienes cuenta? Inicia sesión'}
-            </Text>
+            {enConfirmacion ? (
+              <Text style={s.textoEnlaceContenedor}>
+                <Text style={s.textoEnlacePregunta}>¿Correo incorrecto? </Text>
+                <Text style={s.textoEnlaceAccion}>Cambiar correo</Text>
+              </Text>
+            ) : (
+              <Text style={s.textoEnlaceContenedor}>
+                <Text style={s.textoEnlacePregunta}>¿Ya tienes un diario? </Text>
+                <Text style={s.textoEnlaceAccion}>Inicia sesión</Text>
+              </Text>
+            )}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </GradientBackground>
   );
 }
+
+const s = StyleSheet.create({
+  scrollContenido: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  emblemaContenedor: {
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+  },
+  tituloApp: {
+    fontFamily: fuentes.titulo,
+    fontSize: 40,
+    lineHeight: 46,
+    letterSpacing: -0.5,
+    color: colores.tinta,
+  },
+  subtituloApp: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colores.tintaSuave,
+    marginTop: 8,
+    maxWidth: 320,
+  },
+  formularioGap: {
+    gap: 16,
+  },
+  correoCaja: {
+    backgroundColor: colores.campo,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colores.bordeSutil,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  etiquetaCorreo: {
+    fontFamily: fuentes.medio,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colores.tintaTenue,
+    marginBottom: 4,
+  },
+  textoCorreo: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 15,
+    color: colores.celeste,
+  },
+  mensajeExitoContenedor: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  textoExito: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.celeste,
+    textAlign: 'center',
+  },
+  enlaceAccion: {
+    marginTop: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  enlacePresionado: {
+    opacity: 0.72,
+  },
+  textoEnlaceContenedor: {
+    textAlign: 'center',
+  },
+  textoEnlacePregunta: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 14.5,
+    color: colores.tintaSuave,
+  },
+  textoEnlaceAccion: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 14.5,
+    color: colores.lavanda,
+    letterSpacing: 0.2,
+  },
+});
+
 
 ================================================
 ðŸ“„ ARCHIVO: src\app\(auth)\_layout.tsx
@@ -1088,6 +1953,205 @@ export default function RootLayout() {
 }
 
 ================================================
+ðŸ“„ ARCHIVO: src\components\Bienvenida.tsx
+================================================
+
+import { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import LottieView from 'lottie-react-native';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Sparkles } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Boton } from '@/components/Boton';
+import { GlassCard } from '@/components/GlassCard';
+import { GradientBackground } from '@/components/GradientBackground';
+import { colores, fuentes } from '@/constants/theme';
+
+type Props = {
+  nombreUsuario?: string | null;
+  onEntrar: () => void;
+};
+
+export function Bienvenida({ nombreUsuario, onEntrar }: Props) {
+  const insets = useSafeAreaInsets();
+  const auraScale = useSharedValue(1);
+
+  useEffect(() => {
+    auraScale.value = withRepeat(
+      withSequence(
+        withTiming(1.08, { duration: 3200 }),
+        withTiming(1, { duration: 3200 })
+      ),
+      -1,
+      true
+    );
+  }, [auraScale]);
+
+  const auraAnimada = useAnimatedStyle(() => ({
+    transform: [{ scale: auraScale.value }],
+  }));
+
+  // Limpiar y capitalizar nombre para saludo personalizado
+  const nombreLimpio = nombreUsuario
+    ? nombreUsuario.trim().split(' ')[0]
+    : null;
+  const saludo = nombreLimpio
+    ? `Hola, ${nombreLimpio.charAt(0).toUpperCase() + nombreLimpio.slice(1)}`
+    : 'Buenas noches';
+
+  return (
+    <GradientBackground areaSegura>
+      <View
+        style={[
+          s.contenedor,
+          {
+            paddingTop: insets.top + 20,
+            paddingBottom: insets.bottom + 32,
+          },
+        ]}
+      >
+        {/* Sección superior: Luna animada y resplandor místico */}
+        <Animated.View
+          entering={FadeInDown.duration(900).springify()}
+          style={s.seccionLuna}
+        >
+          {/* Aura luminosa palpitante detrás de la luna */}
+          <Animated.View style={[s.auraContenedor, auraAnimada]}>
+            <LinearGradient
+              colors={['rgba(56, 189, 248, 0.35)', 'rgba(167, 139, 250, 0.25)', 'transparent']}
+              style={s.auraGradiente}
+            />
+          </Animated.View>
+
+          {/* Luna animada con Lottie */}
+          <View style={s.lunaMarco}>
+            <LottieView
+              source={require('../../assets/animations/tranquilo.json')}
+              autoPlay
+              loop
+              style={s.lottie}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Sección central: Saludo y mensaje poético */}
+        <Animated.View
+          entering={FadeIn.delay(350).duration(800)}
+          style={s.seccionTexto}
+        >
+          <Text style={s.saludoTexto}>{saludo}</Text>
+
+          <Text style={s.frasePrincipal}>
+            «Este es tu pequeño espacio para guardar lo que sueñas»
+          </Text>
+
+          <Text style={s.fraseSecundaria}>
+            Donde cada visión, emoción y símbolo nocturno encuentra su lugar en calma.
+          </Text>
+        </Animated.View>
+
+        {/* Sección inferior: Tarjeta y botón de entrada */}
+        <Animated.View
+          entering={FadeInUp.delay(600).duration(800).springify()}
+          style={s.seccionBoton}
+        >
+          <GlassCard relleno="p-2" className="mb-2">
+            <Boton
+              texto="Entrar al diario"
+              onPress={onEntrar}
+              icono={<Sparkles size={20} color={colores.tinta} />}
+            />
+          </GlassCard>
+        </Animated.View>
+      </View>
+    </GradientBackground>
+  );
+}
+
+const s = StyleSheet.create({
+  contenedor: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 28,
+  },
+  seccionLuna: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 30,
+  },
+  auraContenedor: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  auraGradiente: {
+    width: '100%',
+    height: '100%',
+  },
+  lunaMarco: {
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  lottie: {
+    width: 140,
+    height: 140,
+  },
+  seccionTexto: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  saludoTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 16,
+    color: colores.celeste,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 16,
+  },
+  frasePrincipal: {
+    fontFamily: fuentes.titulo,
+    fontSize: 28,
+    lineHeight: 38,
+    color: colores.tinta,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  fraseSecundaria: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 15,
+    lineHeight: 23,
+    color: colores.tintaSuave,
+    textAlign: 'center',
+    marginTop: 14,
+    maxWidth: 320,
+  },
+  seccionBoton: {
+    width: '100%',
+  },
+});
+
+
+================================================
 ðŸ“„ ARCHIVO: src\components\Boton.tsx
 ================================================
 
@@ -1149,9 +2213,16 @@ export function Boton({ texto, onPress, cargando = false, variante = 'primario',
 ================================================
 
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInputProps,
+} from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
-import { colores } from '@/constants/theme';
+import { colores, fuentes } from '@/constants/theme';
 
 type Props = TextInputProps & {
   etiqueta?: string;
@@ -1160,36 +2231,70 @@ type Props = TextInputProps & {
   className?: string;
 };
 
-export function Campo({ etiqueta, multilinea = false, esContrasena = false, className = '', ...resto }: Props) {
+export function Campo({
+  etiqueta,
+  multilinea = false,
+  esContrasena = false,
+  className = "",
+  onFocus,
+  onBlur,
+  ...resto
+}: Props) {
   const [visible, setVisible] = useState(false);
+  const [enfocado, setEnfocado] = useState(false);
   const Icono = visible ? EyeOff : Eye;
 
-  return (
-    <View className="gap-1.5">
-      {etiqueta && <Text className="font-medio text-sm text-tinta-suave">{etiqueta}</Text>}
+  function handleFocus(
+    ...args: Parameters<NonNullable<TextInputProps["onFocus"]>>
+  ) {
+    setEnfocado(true);
+    onFocus?.(...args);
+  }
 
-      <View className="justify-center">
+  function handleBlur(
+    ...args: Parameters<NonNullable<TextInputProps["onBlur"]>>
+  ) {
+    setEnfocado(false);
+    onBlur?.(...args);
+  }
+
+  return (
+    <View style={s.contenedor}>
+      {etiqueta && (
+        <Text style={[s.etiqueta, enfocado && s.etiquetaEnfocada]}>
+          {etiqueta}
+        </Text>
+      )}
+
+      <View style={s.inputWrapper}>
         <TextInput
           {...resto}
-          placeholderTextColor={colores.tintaTenue}
-          selectionColor={colores.acentoFin}
+          placeholderTextColor="rgba(248, 247, 255, 0.36)"
+          selectionColor={colores.celeste}
           multiline={multilinea}
           secureTextEntry={esContrasena && !visible}
-          autoCapitalize={esContrasena ? 'none' : resto.autoCapitalize}
+          autoCapitalize={esContrasena ? "none" : resto.autoCapitalize}
           autoCorrect={esContrasena ? false : resto.autoCorrect}
-          textAlignVertical={multilinea ? 'top' : 'center'}
-          className={`rounded-2xl border border-borde bg-campo py-3.5 font-cuerpo text-base text-tinta ${
-            esContrasena ? 'pl-4 pr-12' : 'px-4'
-          } ${multilinea ? 'min-h-32' : ''} ${className}`}
+          textAlignVertical={multilinea ? "top" : "center"}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          style={[
+            s.inputBase,
+            esContrasena ? s.inputPassword : s.inputNormal,
+            multilinea ? s.inputMultilinea : null,
+            enfocado ? s.inputEnfocado : s.inputReposo,
+          ]}
         />
 
         {esContrasena && (
           <Pressable
             onPress={() => setVisible((v) => !v)}
-            hitSlop={8}
+            hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            className="absolute right-1.5 h-11 w-11 items-center justify-center"
+            accessibilityLabel={
+              visible ? "Ocultar contraseña" : "Mostrar contraseña"
+            }
+            style={s.botonOjo}
           >
             <Icono size={20} color={colores.tintaSuave} />
           </Pressable>
@@ -1199,11 +2304,280 @@ export function Campo({ etiqueta, multilinea = false, esContrasena = false, clas
   );
 }
 
+const s = StyleSheet.create({
+  contenedor: {
+    gap: 7,
+  },
+  etiqueta: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.tintaSuave,
+    letterSpacing: 0.2,
+  },
+  etiquetaEnfocada: {
+    color: colores.celeste,
+  },
+  inputWrapper: {
+    justifyContent: "center",
+  },
+  inputBase: {
+    borderRadius: 16,
+    borderWidth: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    fontFamily: fuentes.cuerpo,
+    fontSize: 15.5,
+    color: colores.tinta,
+    paddingVertical: 13,
+  },
+  inputNormal: {
+    paddingHorizontal: 16,
+  },
+  inputPassword: {
+    paddingLeft: 16,
+    paddingRight: 48,
+  },
+  inputMultilinea: {
+    minHeight: 120,
+    lineHeight: 22,
+  },
+  inputReposo: {
+    borderColor: "rgba(255, 255, 255, 0.16)",
+  },
+  inputEnfocado: {
+    borderColor: "rgba(167, 139, 250, 0.65)",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  botonOjo: {
+    position: "absolute",
+    right: 8,
+    height: 40,
+    width: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
+
+
+================================================
+ðŸ“„ ARCHIVO: src\components\Despedida.tsx
+================================================
+
+import { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import LottieView from 'lottie-react-native';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GradientBackground } from '@/components/GradientBackground';
+import { colores, fuentes } from '@/constants/theme';
+
+export function Despedida() {
+  const auraScale = useSharedValue(1);
+
+  useEffect(() => {
+    auraScale.value = withRepeat(
+      withSequence(
+        withTiming(1.09, { duration: 2400 }),
+        withTiming(1, { duration: 2400 })
+      ),
+      -1,
+      true
+    );
+  }, [auraScale]);
+
+  const auraAnimada = useAnimatedStyle(() => ({
+    transform: [{ scale: auraScale.value }],
+  }));
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(450)}
+      style={StyleSheet.absoluteFill}
+    >
+      <GradientBackground areaSegura>
+        <View style={s.contenedor}>
+          {/* Luna animada con aura nocturna */}
+          <Animated.View
+            entering={FadeInDown.duration(800).springify()}
+            style={s.seccionLuna}
+          >
+            <Animated.View style={[s.auraContenedor, auraAnimada]}>
+              <LinearGradient
+                colors={['rgba(56, 189, 248, 0.32)', 'rgba(167, 139, 250, 0.22)', 'transparent']}
+                style={s.auraGradiente}
+              />
+            </Animated.View>
+
+            <View style={s.lunaMarco}>
+              <LottieView
+                source={require('../../assets/animations/tranquilo.json')}
+                autoPlay
+                loop
+                style={s.lottie}
+              />
+            </View>
+          </Animated.View>
+
+          {/* Mensaje de despedida */}
+          <Animated.View
+            entering={FadeInUp.delay(250).duration(700)}
+            style={s.seccionTexto}
+          >
+            <Text style={s.titulo}>Que tengas dulces sueños</Text>
+            <Text style={s.subtitulo}>
+              Aquí estarán tus recuerdos cuando regreses.
+            </Text>
+          </Animated.View>
+        </View>
+      </GradientBackground>
+    </Animated.View>
+  );
+}
+
+const s = StyleSheet.create({
+  contenedor: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 36,
+  },
+  seccionLuna: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  auraContenedor: {
+    position: 'absolute',
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  auraGradiente: {
+    width: '100%',
+    height: '100%',
+  },
+  lunaMarco: {
+    width: 176,
+    height: 176,
+    borderRadius: 88,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  lottie: {
+    width: 145,
+    height: 145,
+  },
+  seccionTexto: {
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  titulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 27,
+    lineHeight: 35,
+    color: colores.tinta,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  subtitulo: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colores.tintaSuave,
+    textAlign: 'center',
+    marginTop: 10,
+    maxWidth: 290,
+  },
+});
+
+
+================================================
+ðŸ“„ ARCHIVO: src\components\EmblemaCelestial.tsx
+================================================
+
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import Svg, { Circle, Defs, Ellipse, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg';
+import { colores } from '@/constants/theme';
+
+type Props = {
+  tamano?: number;
+  style?: StyleProp<ViewStyle>;
+};
+
+export function EmblemaCelestial({ tamano = 72, style }: Props) {
+  return (
+    <Animated.View entering={FadeIn.duration(650)} style={[s.contenedor, style]}>
+      <Svg width={tamano} height={tamano} viewBox="0 0 72 72">
+        <Defs>
+          <SvgGradient id="emblemaLunaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={colores.celeste} />
+            <Stop offset="100%" stopColor={colores.lavanda} />
+          </SvgGradient>
+        </Defs>
+
+        {/* Resplandor ambiental suave de fondo */}
+        <Circle cx="36" cy="36" r="22" fill="rgba(56, 189, 248, 0.08)" />
+
+        {/* Órbita celestial sutil inclinada con trazo delicado */}
+        <Ellipse
+          cx="36"
+          cy="36"
+          rx="31"
+          ry="12"
+          transform="rotate(-26 36 36)"
+          stroke="rgba(167, 139, 250, 0.42)"
+          strokeWidth="1.2"
+          strokeDasharray="3.5 3.5"
+          fill="none"
+        />
+
+        {/* Luna creciente estilizada en degradado celeste-lavanda */}
+        <Path
+          d="M 36 17 C 26.5 17 19 25 19 35 C 19 45 26.5 53 36 53 C 30 48.5 26.5 42 26.5 35 C 26.5 28 30 21.5 36 17 Z"
+          fill="url(#emblemaLunaGrad)"
+        />
+
+        {/* Destello de 4 puntas en la trayectoria orbital */}
+        <Path
+          d="M 55 18 Q 55 21.5 51.5 21.5 Q 55 21.5 55 25 Q 55 21.5 58.5 21.5 Q 55 21.5 55 18 Z"
+          fill={colores.celeste}
+          opacity={0.92}
+        />
+
+        {/* Detalle estelar menor */}
+        <Circle cx="16" cy="46" r="1.3" fill={colores.lavanda} opacity={0.8} />
+      </Svg>
+    </Animated.View>
+  );
+}
+
+const s = StyleSheet.create({
+  contenedor: {
+    alignSelf: 'flex-start',
+  },
+});
+
+
 ================================================
 ðŸ“„ ARCHIVO: src\components\GlassCard.tsx
 ================================================
 
-import { StyleSheet, View, type ViewProps } from 'react-native';
+import { Platform, StyleSheet, View, type ViewProps } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -1223,29 +2597,77 @@ export function GlassCard({
   ...resto
 }: Props) {
   return (
-    <View className={`overflow-hidden rounded-3xl border border-borde ${className}`} {...resto}>
+    <View
+      className={`overflow-hidden rounded-3xl border border-borde ${className}`}
+      style={
+        Platform.OS === 'ios'
+          ? {
+              shadowColor: acento ?? '#7C3AED',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: acento ? 0.12 : 0.06,
+              shadowRadius: 16,
+            }
+          : undefined
+      }
+      {...resto}
+    >
+      {/* Desenfoque Liquid Glass nativo */}
       {desenfoque && (
         <GlassView
           glassEffectStyle="clear"
-          tintColor="rgba(139,92,246,0.16)"
+          tintColor="rgba(147, 102, 248, 0.14)"
           style={StyleSheet.absoluteFill}
         />
       )}
+
+      {/* Capa base de cristal translúcido */}
       <View pointerEvents="none" className="absolute inset-0 bg-vidrio" />
+
+      {/* Brillo especular superior para dar sensación de volumen */}
       <LinearGradient
         pointerEvents="none"
-        colors={['rgba(255,255,255,0.24)', 'rgba(255,255,255,0)']}
+        colors={['rgba(255,255,255,0.20)', 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0)']}
         start={{ x: 0, y: 0 }}
-        end={{ x: 0.75, y: 0.6 }}
+        end={{ x: 0.8, y: 0.7 }}
         style={StyleSheet.absoluteFill}
       />
+
+      {/* Borde superior iluminado (reflejo de arista) */}
+      <View
+        pointerEvents="none"
+        className="absolute left-4 right-4 top-0 h-[1px]"
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.28)',
+        }}
+      />
+
+      {/* Acento luminoso sutil si se especifica */}
       {acento && (
-        <View
-          pointerEvents="none"
-          className="absolute bottom-5 left-0 top-5 w-1 rounded-full"
-          style={{ backgroundColor: acento }}
-        />
+        <>
+          {/* Halo difuso de acento en la esquina superior izquierda */}
+          <View
+            pointerEvents="none"
+            className="absolute -left-6 -top-6 h-20 w-20 rounded-full"
+            style={{
+              backgroundColor: acento,
+              opacity: 0.18,
+            }}
+          />
+          {/* Píldora de acento lateral refinada con degradado */}
+          <View
+            pointerEvents="none"
+            className="absolute bottom-5 left-1 top-5 w-1 overflow-hidden rounded-full"
+          >
+            <LinearGradient
+              colors={[acento, `${acento}40`]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
+        </>
       )}
+
       <View className={relleno}>{children}</View>
     </View>
   );
@@ -1268,31 +2690,83 @@ type Props = {
   areaSegura?: boolean;
 };
 
+// Estrellas fijas en coordenadas porcentuales para atmósfera estelar
+const ESTRELLAS = [
+  { cx: '12%', cy: '8%', r: 1.2, o: 0.65 },
+  { cx: '28%', cy: '5%', r: 0.9, o: 0.4 },
+  { cx: '76%', cy: '7%', r: 1.4, o: 0.7 },
+  { cx: '88%', cy: '12%', r: 0.8, o: 0.35 },
+  { cx: '48%', cy: '11%', r: 1.1, o: 0.5 },
+  { cx: '6%', cy: '19%', r: 1.5, o: 0.75 },
+  { cx: '92%', cy: '24%', r: 1.0, o: 0.45 },
+  { cx: '35%', cy: '22%', r: 0.8, o: 0.3 },
+  { cx: '64%', cy: '18%', r: 1.2, o: 0.6 },
+  { cx: '18%', cy: '34%', r: 1.0, o: 0.4 },
+  { cx: '82%', cy: '36%', r: 1.3, o: 0.65 },
+  { cx: '52%', cy: '42%', r: 0.9, o: 0.35 },
+  { cx: '8%', cy: '51%', r: 1.2, o: 0.55 },
+  { cx: '94%', cy: '56%', r: 1.5, o: 0.7 },
+  { cx: '41%', cy: '62%', r: 0.8, o: 0.3 },
+  { cx: '72%', cy: '68%', r: 1.1, o: 0.5 },
+  { cx: '24%', cy: '74%', r: 1.3, o: 0.6 },
+  { cx: '86%', cy: '82%', r: 0.9, o: 0.4 },
+  { cx: '14%', cy: '88%', r: 1.2, o: 0.55 },
+  { cx: '62%', cy: '91%', r: 1.4, o: 0.65 },
+  { cx: '38%', cy: '95%', r: 0.8, o: 0.35 },
+];
+
 export function GradientBackground({ children, areaSegura = false }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[s.raiz, areaSegura && { paddingTop: insets.top }]}>
       <View style={StyleSheet.absoluteFill}>
-        <LinearGradient colors={colores.fondo} style={StyleSheet.absoluteFill} />
+        {/* Fondo base degradado cósmico */}
+        <LinearGradient
+          colors={colores.fondo}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Halos oníricos y cielo estrellado en SVG */}
         <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
           <Defs>
             <RadialGradient id="violeta" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={colores.halos.violeta} stopOpacity={0.75} />
-              <Stop offset="1" stopColor={colores.halos.violeta} stopOpacity={0} />
+              <Stop offset="0%" stopColor={colores.halos.violeta} stopOpacity={0.55} />
+              <Stop offset="100%" stopColor={colores.halos.violeta} stopOpacity={0} />
             </RadialGradient>
             <RadialGradient id="magenta" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={colores.halos.magenta} stopOpacity={0.6} />
-              <Stop offset="1" stopColor={colores.halos.magenta} stopOpacity={0} />
+              <Stop offset="0%" stopColor={colores.halos.magenta} stopOpacity={0.42} />
+              <Stop offset="100%" stopColor={colores.halos.magenta} stopOpacity={0} />
             </RadialGradient>
-            <RadialGradient id="turquesa" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={colores.halos.turquesa} stopOpacity={0.55} />
-              <Stop offset="1" stopColor={colores.halos.turquesa} stopOpacity={0} />
+            <RadialGradient id="celeste" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor={colores.halos.celeste} stopOpacity={0.45} />
+              <Stop offset="100%" stopColor={colores.halos.celeste} stopOpacity={0} />
+            </RadialGradient>
+            <RadialGradient id="lavanda" cx="50%" cy="50%" r="50%">
+              <Stop offset="0%" stopColor={colores.halos.lavanda} stopOpacity={0.35} />
+              <Stop offset="100%" stopColor={colores.halos.lavanda} stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Circle cx="0%" cy="6%" r={320} fill="url(#violeta)" />
-          <Circle cx="100%" cy="46%" r={300} fill="url(#magenta)" />
-          <Circle cx="4%" cy="100%" r={320} fill="url(#turquesa)" />
+
+          {/* Halos de luz ambiental */}
+          <Circle cx="10%" cy="8%" r={340} fill="url(#celeste)" />
+          <Circle cx="95%" cy="38%" r={320} fill="url(#magenta)" />
+          <Circle cx="15%" cy="65%" r={340} fill="url(#violeta)" />
+          <Circle cx="85%" cy="92%" r={300} fill="url(#lavanda)" />
+
+          {/* Constelación sutil de estrellas */}
+          {ESTRELLAS.map((star, i) => (
+            <Circle
+              key={i}
+              cx={star.cx}
+              cy={star.cy}
+              r={star.r}
+              fill="#F8F7FF"
+              opacity={star.o}
+            />
+          ))}
         </Svg>
       </View>
 
@@ -1304,6 +2778,63 @@ export function GradientBackground({ children, areaSegura = false }: Props) {
 const s = StyleSheet.create({
   raiz: { flex: 1, backgroundColor: colores.fondo[0] },
 });
+
+================================================
+ðŸ“„ ARCHIVO: src\components\IntensidadEstrellas.tsx
+================================================
+
+import { StyleSheet, View } from 'react-native';
+import { Sparkle } from 'lucide-react-native';
+import { colores } from '@/constants/theme';
+
+type Props = {
+  valor: number | null;
+  color?: string;
+  tamano?: number;
+};
+
+export function IntensidadEstrellas({
+  valor = 0,
+  color = colores.celeste,
+  tamano = 13,
+}: Props) {
+  const nivel = valor ?? 0;
+
+  return (
+    <View
+      style={s.fila}
+      accessibilityRole="text"
+      accessibilityLabel={`Intensidad: ${nivel} de 5 estrellas`}
+    >
+      {[1, 2, 3, 4, 5].map((estrella) => {
+        const activa = estrella <= nivel;
+
+        return (
+          <View key={estrella} style={s.estrellaContenedor}>
+            <Sparkle
+              size={tamano}
+              color={activa ? color : 'rgba(248, 247, 255, 0.22)'}
+              fill={activa ? color : 'transparent'}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  fila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  estrellaContenedor: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
 
 ================================================
 ðŸ“„ ARCHIVO: src\components\LottieMood.tsx
@@ -1341,51 +2872,756 @@ export function LottieMood({ estado, tamano = 64 }: Props) {
 }
 
 ================================================
+ðŸ“„ ARCHIVO: src\components\ModalConfirmacion.tsx
+================================================
+
+import type { ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colores, fuentes } from '@/constants/theme';
+
+type Props = {
+  visible: boolean;
+  titulo: string;
+  descripcion: string;
+  textoConfirmar?: string;
+  textoCancelar?: string;
+  onConfirmar: () => void | Promise<void>;
+  onCancelar: () => void;
+  cargando?: boolean;
+  variante?: 'primario' | 'peligro';
+  icono?: ReactNode;
+};
+
+export function ModalConfirmacion({
+  visible,
+  titulo,
+  descripcion,
+  textoConfirmar = 'Confirmar',
+  textoCancelar = 'Cancelar',
+  onConfirmar,
+  onCancelar,
+  cargando = false,
+  variante = 'primario',
+  icono,
+}: Props) {
+  const esPeligro = variante === 'peligro';
+  const colorAcento = esPeligro ? colores.error : colores.lavanda;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={() => {
+        if (!cargando) onCancelar();
+      }}
+    >
+      <View style={s.overlay}>
+        {/* Backdrop más oscuro para atenuar fuertemente la pantalla posterior */}
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={() => {
+            if (!cargando) onCancelar();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar ventana emergente"
+        />
+
+        <View style={s.tarjetaWrapper}>
+          {/* Panel central con tonalidad azul medianoche con matiz violeta profundo y alta opacidad */}
+          <View
+            style={[
+              s.panelSuperficie,
+              Platform.OS === 'ios'
+                ? {
+                    shadowColor: colorAcento,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.16,
+                    shadowRadius: 20,
+                  }
+                : undefined,
+            ]}
+          >
+            {/* Brillo especular superior tenue para efecto de volumen Liquid Glass */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(255, 255, 255, 0.16)', 'rgba(255, 255, 255, 0.03)', 'rgba(255, 255, 255, 0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.8, y: 0.6 }}
+              style={StyleSheet.absoluteFill}
+            />
+
+            {/* Borde superior iluminado (arista de cristal) */}
+            <View pointerEvents="none" style={s.aristaIluminada} />
+
+            {/* Halo sutil de acento en la esquina */}
+            <View
+              pointerEvents="none"
+              style={[
+                s.haloAcento,
+                { backgroundColor: colorAcento },
+              ]}
+            />
+
+            <View style={s.contenidoInterno}>
+              {/* Icono temático */}
+              {icono && (
+                <View
+                  style={[
+                    s.iconoContenedor,
+                    esPeligro && { borderColor: 'rgba(251, 113, 133, 0.28)', backgroundColor: 'rgba(251, 113, 133, 0.10)' },
+                  ]}
+                >
+                  {icono}
+                </View>
+              )}
+
+              {/* Título de alto contraste */}
+              <Text style={s.titulo}>{titulo}</Text>
+
+              {/* Descripción legible */}
+              <Text style={s.descripcion}>{descripcion}</Text>
+
+              {/* Acciones */}
+              <View style={s.accionesFila}>
+                {/* Botón secundario: Cancelar */}
+                <Pressable
+                  onPress={onCancelar}
+                  disabled={cargando}
+                  accessibilityRole="button"
+                  accessibilityLabel={textoCancelar}
+                  style={({ pressed }) => [
+                    s.botonBase,
+                    s.botonCancelar,
+                    pressed && s.botonPresionado,
+                    cargando && s.botonDeshabilitado,
+                  ]}
+                >
+                  <Text style={s.textoCancelar}>{textoCancelar}</Text>
+                </Pressable>
+
+                {/* Botón principal: Confirmar / Eliminar */}
+                <Pressable
+                  onPress={onConfirmar}
+                  disabled={cargando}
+                  accessibilityRole="button"
+                  accessibilityLabel={textoConfirmar}
+                  style={({ pressed }) => [
+                    s.botonBase,
+                    esPeligro ? s.botonPeligro : s.botonPrimario,
+                    pressed && s.botonPresionado,
+                    cargando && s.botonDeshabilitado,
+                  ]}
+                >
+                  {cargando ? (
+                    <ActivityIndicator color={colores.tinta} size="small" />
+                  ) : (
+                    <Text style={esPeligro ? s.textoPeligro : s.textoPrimario}>
+                      {textoConfirmar}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const s = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(3, 4, 16, 0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+  },
+  tarjetaWrapper: {
+    width: '100%',
+    maxWidth: 340,
+    zIndex: 10,
+  },
+  panelSuperficie: {
+    width: '100%',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: 'rgba(18, 14, 38, 0.96)',
+    overflow: 'hidden',
+  },
+  aristaIluminada: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  haloAcento: {
+    position: 'absolute',
+    right: -16,
+    top: -16,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    opacity: 0.12,
+  },
+  contenidoInterno: {
+    padding: 24,
+  },
+  iconoContenedor: {
+    alignSelf: 'center',
+    marginBottom: 14,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  titulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 21,
+    lineHeight: 27,
+    color: colores.tinta,
+    textAlign: 'center',
+    letterSpacing: -0.2,
+    marginBottom: 8,
+  },
+  descripcion: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(248, 247, 255, 0.78)',
+    textAlign: 'center',
+    marginBottom: 22,
+    paddingHorizontal: 6,
+  },
+  accionesFila: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+  },
+  botonBase: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  botonPresionado: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }],
+  },
+  botonDeshabilitado: {
+    opacity: 0.5,
+  },
+  botonCancelar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+  },
+  textoCancelar: {
+    fontFamily: fuentes.medio,
+    fontSize: 14,
+    color: colores.tintaSuave,
+  },
+  botonPrimario: {
+    backgroundColor: colores.acento,
+  },
+  textoPrimario: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 14,
+    color: colores.tinta,
+  },
+  botonPeligro: {
+    backgroundColor: 'rgba(251, 113, 133, 0.22)',
+    borderWidth: 1,
+    borderColor: colores.error,
+  },
+  textoPeligro: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 14,
+    color: colores.error,
+  },
+});
+
+
+================================================
 ðŸ“„ ARCHIVO: src\components\MoodChip.tsx
 ================================================
 
-import { Pressable, Text } from 'react-native';
-import { colores } from '@/constants/theme';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { colores, fuentes } from '@/constants/theme';
 
 type Props = {
   etiqueta: string;
   seleccionado: boolean;
   onPress: () => void;
   color?: string;
+  icono?: ReactNode;
 };
 
-export function MoodChip({ etiqueta, seleccionado, onPress, color = colores.acento }: Props) {
+export function MoodChip({
+  etiqueta,
+  seleccionado,
+  onPress,
+  color = colores.acento,
+  icono,
+}: Props) {
   return (
     <Pressable
       onPress={onPress}
-      className={`rounded-full border px-4 py-2.5 active:opacity-80 ${
-        seleccionado ? 'border-transparent' : 'border-borde bg-campo'
-      }`}
-      style={seleccionado ? { backgroundColor: color } : undefined}
+      accessibilityRole="button"
+      accessibilityState={{ selected: seleccionado }}
+      accessibilityLabel={etiqueta}
+      style={({ pressed }) => [
+        s.chipBase,
+        seleccionado ? s.chipSeleccionado : s.chipInactivo,
+        seleccionado && { backgroundColor: color, borderColor: color },
+        pressed && s.chipPresionado,
+      ]}
     >
-      <Text
-        className={`text-sm ${seleccionado ? 'font-fuerte text-medianoche' : 'font-medio text-tinta-suave'}`}
-      >
-        {etiqueta}
-      </Text>
+      <View style={s.contenido}>
+        {icono}
+        <Text
+          style={[
+            s.texto,
+            seleccionado ? s.textoSeleccionado : s.textoInactivo,
+          ]}
+        >
+          {etiqueta}
+        </Text>
+      </View>
     </Pressable>
   );
 }
+
+const s = StyleSheet.create({
+  chipBase: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipInactivo: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+  },
+  chipSeleccionado: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  chipPresionado: {
+    opacity: 0.82,
+    transform: [{ scale: 0.96 }],
+  },
+  contenido: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  texto: {
+    fontSize: 14,
+  },
+  textoInactivo: {
+    fontFamily: fuentes.medio,
+    color: colores.tintaSuave,
+  },
+  textoSeleccionado: {
+    fontFamily: fuentes.fuerte,
+    color: '#06071B',
+  },
+});
+
+
+================================================
+ðŸ“„ ARCHIVO: src\components\SelectorIntensidad.tsx
+================================================
+
+import { colores, fuentes } from "@/constants/theme";
+import { Sparkles } from "lucide-react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+type Props = {
+  valor: number;
+  onChange: (n: number) => void;
+  color?: string;
+};
+
+const DESCRIPCIONES: Record<number, string> = {
+  1: "Muy tenue",
+  2: "Leve",
+  3: "Moderado",
+  4: "Intenso",
+  5: "Muy intenso",
+};
+
+export function SelectorIntensidad({
+  valor,
+  onChange,
+  color = colores.acento,
+}: Props) {
+  return (
+    <View style={s.contenedor}>
+      <View style={s.fila}>
+        {[1, 2, 3, 4, 5].map((n) => {
+          const activa = n <= valor;
+          return (
+            <Pressable
+              key={n}
+              onPress={() => onChange(n)}
+              accessibilityRole="button"
+              accessibilityLabel={`Intensidad ${n}: ${DESCRIPCIONES[n]}`}
+              accessibilityState={{ selected: n === valor }}
+              style={({ pressed }) => [s.boton, pressed && s.botonPresionado]}
+            >
+              <View
+                style={[
+                  s.circulo,
+                  activa
+                    ? {
+                        backgroundColor: `${color}28`,
+                        borderColor: `${color}99`,
+                      }
+                    : s.circuloInactivo,
+                ]}
+              >
+                <Sparkles
+                  size={20}
+                  color={activa ? color : colores.tintaTenue}
+                  strokeWidth={activa ? 2 : 1.5}
+                />
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={s.descripcion}>{DESCRIPCIONES[valor] ?? ""}</Text>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  contenedor: {
+    alignItems: "center",
+    gap: 10,
+  },
+  fila: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "center",
+  },
+  boton: {
+    minWidth: 50,
+    alignItems: "center",
+  },
+  botonPresionado: {
+    opacity: 0.75,
+    transform: [{ scale: 0.9 }],
+  },
+  circulo: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  circuloInactivo: {
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderColor: "rgba(255, 255, 255, 0.12)",
+  },
+  descripcion: {
+    fontFamily: fuentes.medio,
+    fontSize: 13,
+    color: colores.tintaTenue,
+    letterSpacing: 0.3,
+  },
+});
+
+
+================================================
+ðŸ“„ ARCHIVO: src\components\SuenoCard.tsx
+================================================
+
+/* eslint-disable react-hooks/immutability */
+import { memo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { GlassCard } from '@/components/GlassCard';
+import { IntensidadEstrellas } from '@/components/IntensidadEstrellas';
+import { DESENFOQUE_EN_LISTAS, colorDeEstado, fuentes } from '@/constants/theme';
+import type { SuenoConSimbolos } from '@/types';
+
+type Props = {
+  sueno: SuenoConSimbolos;
+  index: number;
+  onPress: () => void;
+};
+
+function formatearFecha(fecha?: string | null) {
+  if (!fecha) return '';
+  const d = new Date(`${fecha}T00:00:00`);
+  return d.toLocaleDateString('es-EC', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+function SuenoCardComponent({ sueno, index, onPress }: Props) {
+  const scale = useSharedValue(1);
+  const color = colorDeEstado(sueno.estado_animo);
+
+  const estiloAnimado = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  function handlePressIn() {
+    scale.value = withTiming(0.978, { duration: 100 });
+  }
+
+  function handlePressOut() {
+    scale.value = withSpring(1, { damping: 15, stiffness: 220 });
+  }
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(380)
+        .delay(Math.min(index * 50, 300))
+        .springify()
+        .damping(18)}
+      style={estiloAnimado}
+    >
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        accessibilityRole="button"
+        accessibilityLabel={`Abrir sueño: ${sueno.titulo}`}
+        style={s.pressable}
+      >
+        <GlassCard
+          desenfoque={DESENFOQUE_EN_LISTAS}
+          acento={color}
+          relleno="p-4"
+        >
+          {/* Cabecera de la tarjeta: Fecha y Estado de ánimo */}
+          <View style={s.filaCabecera}>
+            <View style={s.fechaBadge}>
+              <Text style={s.fechaTexto}>{formatearFecha(sueno.fecha)}</Text>
+            </View>
+
+            <View
+              style={[
+                s.estadoBadge,
+                {
+                  backgroundColor: `${color}18`,
+                  borderColor: `${color}40`,
+                },
+              ]}
+            >
+              <View style={[s.estadoPunto, { backgroundColor: color }]} />
+              <Text style={[s.estadoTexto, { color }]}>
+                {sueno.estado_animo ?? 'sin estado'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Título editorial en Fraunces */}
+          <Text style={s.titulo} numberOfLines={2}>
+            {sueno.titulo}
+          </Text>
+
+          {/* Fragmento del relato */}
+          {sueno.relato ? (
+            <Text style={s.relato} numberOfLines={2}>
+              {sueno.relato}
+            </Text>
+          ) : null}
+
+          {/* Pie de tarjeta: Símbolos e Intensidad */}
+          <View style={s.filaPie}>
+            {/* Lista de símbolos asociados */}
+            <View style={s.contenedorSimbolos}>
+              {sueno.simbolos.length > 0 ? (
+                sueno.simbolos.slice(0, 3).map((simbolo) => (
+                  <View key={simbolo} style={s.simboloChip}>
+                    <Text style={s.simboloTexto}>#{simbolo}</Text>
+                  </View>
+                ))
+              ) : (
+                <View style={{ flex: 1 }} />
+              )}
+              {sueno.simbolos.length > 3 && (
+                <Text style={s.masSimbolosTexto}>+{sueno.simbolos.length - 3}</Text>
+              )}
+            </View>
+
+            {/* Intensidad con estrellas celestes */}
+            <View style={s.intensidadWrapper}>
+              <IntensidadEstrellas valor={sueno.intensidad} color={color} />
+            </View>
+          </View>
+        </GlassCard>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+export const SuenoCard = memo(SuenoCardComponent);
+
+const s = StyleSheet.create({
+  pressable: {
+    borderRadius: 24,
+  },
+  filaCabecera: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  fechaBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  fechaTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 12,
+    color: 'rgba(248, 247, 255, 0.55)',
+    textTransform: 'capitalize',
+  },
+  estadoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  estadoPunto: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  estadoTexto: {
+    fontFamily: fuentes.fuerte,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  titulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 19,
+    lineHeight: 25,
+    color: '#F8F7FF',
+    letterSpacing: -0.2,
+  },
+  relato: {
+    fontFamily: fuentes.cuerpo,
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(248, 247, 255, 0.70)',
+    marginTop: 6,
+  },
+  filaPie: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.07)',
+  },
+  contenedorSimbolos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
+  },
+  simboloChip: {
+    backgroundColor: 'rgba(167, 139, 250, 0.10)',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.20)',
+  },
+  simboloTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 11,
+    color: '#C4B5FD',
+  },
+  masSimbolosTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 11,
+    color: 'rgba(248, 247, 255, 0.45)',
+  },
+  intensidadWrapper: {
+    paddingLeft: 6,
+  },
+});
+
 
 ================================================
 ðŸ“„ ARCHIVO: src\components\SuenoForm.tsx
 ================================================
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { router } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Plus, Sparkles } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Boton } from '@/components/Boton';
 import { Campo } from '@/components/Campo';
 import { GlassCard } from '@/components/GlassCard';
 import { LottieMood } from '@/components/LottieMood';
 import { MoodChip } from '@/components/MoodChip';
-import { colorDeEstado, colores } from '@/constants/theme';
+import { SelectorIntensidad } from '@/components/SelectorIntensidad';
+import { colorDeEstado, colores, fuentes } from '@/constants/theme';
 import { useSimbolos } from '@/hooks/useSimbolos';
 import { mensajeError } from '@/lib/errores';
 import type { EstadoAnimo, NuevoSueno } from '@/types';
@@ -1407,6 +3643,8 @@ type Props = {
 };
 
 export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuardar, children }: Props) {
+  const insets = useSafeAreaInsets();
+  const espacioSuperior = insets.top + (Platform.OS === 'ios' ? 52 : 56);
   const { simbolos, recargar } = useSimbolos();
   const [titulo, setTitulo] = useState(inicial?.titulo ?? '');
   const [relato, setRelato] = useState(inicial?.relato ?? '');
@@ -1415,12 +3653,26 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
   const [elegidos, setElegidos] = useState<string[]>(simbolosIniciales);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
+
+  // Animated.Value para la animación de éxito — useMemo evita recrearla en cada render
+  // y el React Compiler no la trata como un ref que se lee durante el render.
+  const exitoOpacidad = useMemo(() => new Animated.Value(0), []);
 
   const color = colorDeEstado(estado);
 
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  function mostrarExito() {
+    setGuardadoExitoso(true);
+    Animated.sequence([
+      Animated.timing(exitoOpacidad, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(600),
+      Animated.timing(exitoOpacidad, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }
 
   function alternar(id: string) {
     setElegidos((actual) => (actual.includes(id) ? actual.filter((x) => x !== id) : [...actual, id]));
@@ -1438,6 +3690,9 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
         { titulo: titulo.trim(), relato: relato.trim() || null, estado_animo: estado, intensidad },
         elegidos
       );
+      mostrarExito();
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      router.back();
     } catch (e) {
       setError(mensajeError(e, 'No se pudo guardar.'));
     } finally {
@@ -1449,35 +3704,53 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ gap: 16, padding: 20, paddingBottom: 48 }}
+        contentContainerStyle={{
+          gap: 16,
+          paddingHorizontal: 20,
+          paddingTop: espacioSuperior,
+          paddingBottom: insets.bottom + 48,
+        }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── Tarjeta: Título y relato ── */}
         <GlassCard relleno="p-5">
-          <View className="gap-4">
-            <Campo etiqueta="Título" value={titulo} onChangeText={setTitulo} placeholder="Ej. Volaba sobre el mar" />
+          <View style={s.seccionEncabezado}>
+            <View style={[s.accentBar, { backgroundColor: colores.celeste }]} />
+            <Text style={s.seccionTitulo}>El sueño</Text>
+          </View>
+          <View style={s.camposGap}>
+            <Campo
+              etiqueta="Título"
+              value={titulo}
+              onChangeText={setTitulo}
+              placeholder="Ej. Volaba sobre el mar"
+            />
             <Campo
               etiqueta="Relato"
               value={relato}
               onChangeText={setRelato}
               multilinea
-              placeholder="Cuéntalo con detalle mientras lo recuerdes"
+              placeholder="Cuéntalo con detalle mientras lo recuerdes…"
             />
           </View>
         </GlassCard>
 
+        {/* ── Tarjeta: Estado de ánimo e intensidad ── */}
         <GlassCard relleno="p-5">
-          <Text className="font-fuerte text-lg text-tinta">Cómo se sintió</Text>
+          <View style={s.seccionEncabezado}>
+            <View style={[s.accentBar, { backgroundColor: color }]} />
+            <Text style={s.seccionTitulo}>Cómo se sintió</Text>
+          </View>
 
-          <View className="my-4 items-center">
-            <View
-              className="h-28 w-28 items-center justify-center overflow-hidden rounded-full"
-              style={{ backgroundColor: `${color}30` }}
-            >
+          {/* Lottie central */}
+          <View style={s.lottieFila}>
+            <View style={[s.lottieCirculo, { backgroundColor: `${color}28` }]}>
               <LottieMood estado={estado} tamano={96} />
             </View>
           </View>
 
-          <View className="flex-row flex-wrap gap-2">
+          {/* Chips de estado */}
+          <View style={s.chipsEstado}>
             {ESTADOS.map((e) => (
               <MoodChip
                 key={e}
@@ -1489,32 +3762,37 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
             ))}
           </View>
 
-          <Text className="mb-2 mt-5 font-medio text-sm text-tinta-suave">Intensidad</Text>
-          <View className="flex-row gap-2">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <MoodChip key={n} etiqueta={String(n)} seleccionado={intensidad === n} color={color} onPress={() => setIntensidad(n)} />
-            ))}
-          </View>
+          {/* Separador sutil */}
+          <View style={s.separador} />
+
+          {/* Intensidad */}
+          <Text style={s.subseccionTitulo}>Intensidad del sueño</Text>
+          <SelectorIntensidad valor={intensidad} onChange={setIntensidad} color={color} />
         </GlassCard>
 
+        {/* ── Tarjeta: Símbolos ── */}
         <GlassCard relleno="p-5">
-          <Text className="font-fuerte text-lg text-tinta">Símbolos del sueño</Text>
+          <View style={s.seccionEncabezado}>
+            <View style={[s.accentBar, { backgroundColor: colores.lavanda }]} />
+            <Text style={s.seccionTitulo}>Símbolos del sueño</Text>
+          </View>
 
           {simbolos.length === 0 ? (
             <Pressable
               onPress={() => router.push('/simbolos/nuevo')}
-              className="mt-3 flex-row items-center gap-2 active:opacity-70"
+              style={({ pressed }) => [s.crearSimboloBoton, pressed && s.crearSimboloPresionado]}
             >
               <Plus size={18} color={colores.acento} />
-              <Text className="font-medio text-base text-tinta">Crea tu primer símbolo</Text>
+              <Text style={s.crearSimboloTexto}>Crea tu primer símbolo</Text>
             </Pressable>
           ) : (
-            <View className="mt-3 flex-row flex-wrap gap-2">
+            <View style={s.chipsSimbolos}>
               {simbolos.map((sim) => (
                 <MoodChip
                   key={sim.id}
                   etiqueta={sim.nombre}
                   seleccionado={elegidos.includes(sim.id)}
+                  color={colores.lavanda}
                   onPress={() => alternar(sim.id)}
                 />
               ))}
@@ -1522,8 +3800,18 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
           )}
         </GlassCard>
 
-        {error && <Text className="font-medio text-sm text-peligro">{error}</Text>}
+        {/* ── Error ── */}
+        {error && <Text style={s.textoError}>{error}</Text>}
 
+        {/* ── Confirmación de guardado ── */}
+        {guardadoExitoso && (
+          <Animated.View style={[s.exitoFila, { opacity: exitoOpacidad }]}>
+            <Sparkles size={15} color={colores.celeste} />
+            <Text style={s.exitoTexto}>Sueño guardado</Text>
+          </Animated.View>
+        )}
+
+        {/* ── Botón principal ── */}
         <Boton texto={textoBoton} onPress={enviar} cargando={guardando} />
 
         {children}
@@ -1532,25 +3820,129 @@ export function SuenoForm({ inicial, simbolosIniciales = [], textoBoton, onGuard
   );
 }
 
+const s = StyleSheet.create({
+  seccionEncabezado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 18,
+  },
+  accentBar: {
+    width: 3,
+    height: 18,
+    borderRadius: 2,
+  },
+  seccionTitulo: {
+    fontFamily: fuentes.titulo,
+    fontSize: 18,
+    color: colores.tinta,
+    letterSpacing: 0.1,
+  },
+  camposGap: {
+    gap: 16,
+  },
+  lottieFila: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  lottieCirculo: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  chipsEstado: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  separador: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: 16,
+  },
+  subseccionTitulo: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.tintaSuave,
+    letterSpacing: 0.2,
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  chipsSimbolos: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  crearSimboloBoton: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  crearSimboloPresionado: {
+    opacity: 0.6,
+  },
+  crearSimboloTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 15,
+    color: colores.tinta,
+  },
+  textoError: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.error,
+    textAlign: 'center',
+  },
+  exitoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  exitoTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 13.5,
+    color: colores.celeste,
+    letterSpacing: 0.3,
+  },
+});
+
+
 ================================================
 ðŸ“„ ARCHIVO: src\constants\theme.ts
 ================================================
 
 export const colores = {
-  fondo: ['#0A0B2E', '#1E1066', '#3B0F70'] as const,
-  halos: { violeta: '#7C3AED', magenta: '#D946EF', turquesa: '#22D3EE' },
-  tinta: '#F5F3FF',
-  tintaSuave: 'rgba(245,243,255,0.72)',
-  tintaTenue: 'rgba(245,243,255,0.45)',
-  tintaOscura: '#0A0B2E',
-  vidrio: 'rgba(255,255,255,0.09)',
-  campo: 'rgba(255,255,255,0.08)',
-  borde: 'rgba(255,255,255,0.24)',
+  fondo: ['#06071B', '#110A38', '#25084A'] as const,
+  halos: {
+    violeta: '#7C3AED',
+    magenta: '#D946EF',
+    turquesa: '#22D3EE',
+    celeste: '#38BDF8',
+    lavanda: '#C4B5FD',
+    luna: '#E0F2FE',
+  },
+  tinta: '#F8F7FF',
+  tintaSuave: 'rgba(248,247,255,0.74)',
+  tintaTenue: 'rgba(248,247,255,0.45)',
+  tintaOscura: '#06071B',
+  vidrio: 'rgba(255,255,255,0.08)',
+  vidrioBrillo: 'rgba(255,255,255,0.18)',
+  campo: 'rgba(255,255,255,0.06)',
+  borde: 'rgba(255,255,255,0.18)',
+  bordeSutil: 'rgba(255,255,255,0.09)',
+  bordeLuz: 'rgba(255,255,255,0.32)',
   acento: '#8B5CF6',
   acentoFin: '#D946EF',
+  celeste: '#38BDF8',
+  lavanda: '#A78BFA',
   error: '#FDA4AF',
   estado: {
-    tranquilo: '#22D3EE',
+    tranquilo: '#38BDF8',
     lucido: '#A78BFA',
     raro: '#F0ABFC',
     pesadilla: '#FB7185',
@@ -1744,6 +4136,7 @@ export const supabase = createClient<Database>(url, key, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce',
   },
 });
 
@@ -1764,7 +4157,19 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 export async function registrar(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: 'diariosuenos://confirm',
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function intercambiarCodigoPorSesion(code: string) {
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) throw error;
   return data;
 }
@@ -1798,7 +4203,13 @@ export async function verificarCodigo(email: string, codigo: string) {
 }
 
 export async function reenviarCodigo(email: string) {
-  const { error } = await supabase.auth.resend({ type: 'signup', email });
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: 'diariosuenos://confirm',
+    },
+  });
   if (error) throw error;
 }
 

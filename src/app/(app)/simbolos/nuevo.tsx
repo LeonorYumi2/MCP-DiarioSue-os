@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -77,40 +85,42 @@ export default function FormularioSimbolo() {
           <ActivityIndicator color={colores.tinta} />
         </View>
       ) : (
-        <ScrollView
-          contentContainerStyle={{
-            gap: 16,
-            paddingHorizontal: 20,
-            paddingTop: insets.top + (Platform.OS === 'ios' ? 52 : 56),
-            paddingBottom: insets.bottom + 48,
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <GlassCard relleno="p-5">
-            <View className="gap-4">
-              <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder="Ej. Agua" />
-              <Campo
-                etiqueta="Significado"
-                value={significado}
-                onChangeText={setSignificado}
-                multilinea
-                placeholder="¿Qué representa para ti?"
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+          <ScrollView
+            contentContainerStyle={{
+              gap: 16,
+              paddingHorizontal: 20,
+              paddingTop: insets.top + (Platform.OS === 'ios' ? 52 : 56),
+              paddingBottom: insets.bottom + 48,
+            }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <GlassCard relleno="p-5">
+              <View className="gap-4">
+                <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder="Ej. Agua" />
+                <Campo
+                  etiqueta="Significado"
+                  value={significado}
+                  onChangeText={setSignificado}
+                  multilinea
+                  placeholder="¿Qué representa para ti?"
+                />
+              </View>
+            </GlassCard>
+
+            {error && <Text className="font-medio text-sm text-peligro">{error}</Text>}
+
+            <Boton texto={editando ? 'Guardar cambios' : 'Guardar símbolo'} onPress={guardar} cargando={guardando} />
+
+            {editando && (
+              <Boton
+                texto="Eliminar símbolo"
+                onPress={() => setModalEliminarVisible(true)}
+                variante="peligro"
               />
-            </View>
-          </GlassCard>
-
-          {error && <Text className="font-medio text-sm text-peligro">{error}</Text>}
-
-          <Boton texto={editando ? 'Guardar cambios' : 'Guardar símbolo'} onPress={guardar} cargando={guardando} />
-
-          {editando && (
-            <Boton
-              texto="Eliminar símbolo"
-              onPress={() => setModalEliminarVisible(true)}
-              variante="peligro"
-            />
-          )}
-        </ScrollView>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
       )}
 
       {editando && (
